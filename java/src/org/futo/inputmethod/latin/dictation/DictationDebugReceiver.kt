@@ -26,6 +26,7 @@ class DictationDebugReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "DictationDebug"
         private const val P = "org.futo.inputmethod.latin.dictation."
+        private var debugRecognizer: android.speech.SpeechRecognizer? = null
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -38,6 +39,29 @@ class DictationDebugReceiver : BroadcastReceiver() {
                 val c = DictationController.instance
                 Log.i(TAG, "TOGGLE controller=${c != null} viewActive=${c?.isInputViewActive} engine=${DictationEngine.state.value}")
                 c?.debugToggle()
+            }
+            P + "DEBUG_RECOGNIZE" -> {
+                // Drives DictationRecognitionService exactly as an outside client would.
+                val ctx = context.applicationContext
+                val sr = android.speech.SpeechRecognizer.createSpeechRecognizer(ctx,
+                    android.content.ComponentName(ctx, DictationRecognitionService::class.java))
+                debugRecognizer = sr
+                sr.setRecognitionListener(object : android.speech.RecognitionListener {
+                    private fun text(b: android.os.Bundle?) = b?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                    override fun onReadyForSpeech(params: android.os.Bundle?) { Log.i(TAG, "REC ready") }
+                    override fun onBeginningOfSpeech() { Log.i(TAG, "REC beginningOfSpeech") }
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() { Log.i(TAG, "REC endOfSpeech") }
+                    override fun onError(error: Int) { Log.i(TAG, "REC error=$error"); sr.destroy(); debugRecognizer = null }
+                    override fun onResults(results: android.os.Bundle?) { Log.i(TAG, "REC results=[${text(results)}]"); sr.destroy(); debugRecognizer = null }
+                    override fun onPartialResults(partialResults: android.os.Bundle?) { Log.i(TAG, "REC partial=[${text(partialResults)}]") }
+                    override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+                })
+                sr.startListening(Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM))
+                Log.i(TAG, "REC startListening sent")
             }
             P + "DEBUG_FAKE_CLEANUP" -> {
                 DictationController.debugFakeCleanupMs = intent.getLongExtra("ms", 0L)

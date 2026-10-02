@@ -11,4 +11,10 @@
         android:imeSubtypeMode="keyboard"
         android:isAsciiCapable="true"
         android:overridesImplicitlyEnabledSubtype="true" />
+    <!-- Voice subtype (personal fork): if the system switches to a voice IME subtype of this
+         keyboard, it starts streaming dictation. Auxiliary = never the default/typing subtype. -->
+    <subtype android:icon="@drawable/mic_fill"
+        android:label="@string/dictation_voice_subtype_label"
+        android:imeSubtypeMode="voice"
+        android:isAuxiliary="true" />
 </input-method>

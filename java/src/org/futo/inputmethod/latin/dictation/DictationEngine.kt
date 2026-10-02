@@ -25,6 +25,7 @@ import org.futo.inputmethod.latin.dictation.stt.SttConfig
 import org.futo.inputmethod.latin.dictation.stt.SttEvent
 import org.futo.inputmethod.latin.dictation.stt.StreamingSttProvider
 import org.futo.inputmethod.latin.uix.getSetting
+import org.futo.inputmethod.latin.uix.setSetting
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 
@@ -110,12 +111,25 @@ object DictationEngine {
         if (_state.value != s) { _state.value = s; DictationLog.event("state", "state" to s.name) }
     }
 
-    /** Called from the IME (main thread). Starts the FGS; capture begins in [onServiceReady]. */
-    fun start(context: Context, triggerPath: String) {
+    private var usingFgs = true
+
+    /**
+     * Starts a session. From the IME this starts the microphone foreground service and capture
+     * begins in [onServiceReady]. A RecognitionService is already bound by a foreground client and
+     * passes [useForegroundService] = false.
+     */
+    fun start(context: Context, triggerPath: String, useForegroundService: Boolean = true) {
         val ctx = context.applicationContext
         scope.launch {
             if (_state.value != DictationState.Idle) { Log.i(TAG, "start ignored: ${_state.value}"); return@launch }
             appContext = ctx
+            usingFgs = useForegroundService
+            // Which system path started dictation (keyboard key, voice subtype, RecognitionService).
+            try {
+                val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+                ctx.setSetting(DICTATION_LAST_TRIGGER_PATH, "$triggerPath at $stamp")
+            } catch (_: Exception) {}
+            Log.i(TAG, "dictation start trigger=$triggerPath")
             stopRequested = false
             sessionId = sessionCounter.incrementAndGet()
             segmentCounter = 0
@@ -147,6 +161,7 @@ object DictationEngine {
                 finishStop("no_api_key"); return@launch
             }
             setState(DictationState.Starting)
+            if (!useForegroundService) { beginCapture(); return@launch }
             try {
                 ctx.startForegroundService(Intent(ctx, DictationService::class.java).setAction(DictationService.ACTION_START))
                 DictationLog.event("fgs_start_requested")
@@ -162,8 +177,14 @@ object DictationEngine {
     fun onServiceReady() {
         scope.launch {
             if (_state.value != DictationState.Starting) return@launch
-            val ctx = appContext ?: return@launch
             DictationLog.event("fgs_ready")
+            beginCapture()
+        }
+    }
+
+    private suspend fun beginCapture() {
+        run {
+            val ctx = appContext ?: return
             // Fresh session: forget audio from earlier sessions.
             sessionBaseOffset = ring.totalWritten
             sendCursor = sessionBaseOffset
@@ -178,7 +199,7 @@ object DictationEngine {
                 DictationLog.event("capture_started", "injected" to inject)
             } else {
                 val cap = AudioCapture(ctx, captureListener)
-                if (!cap.start(requestFocus = true)) { finishStop("capture_failed"); return@launch }
+                if (!cap.start(requestFocus = true)) { finishStop("capture_failed"); return }
                 capture = cap
                 DictationLog.event("capture_started")
             }
@@ -230,7 +251,7 @@ object DictationEngine {
         idleJob?.cancel(); idleJob = null
         quietJob?.cancel(); quietJob = null
         reconnectJob?.cancel(); reconnectJob = null
-        appContext?.let { try { it.startService(Intent(it, DictationService::class.java).setAction(DictationService.ACTION_STOP)) } catch (_: Exception) {} }
+        if (usingFgs) appContext?.let { try { it.startService(Intent(it, DictationService::class.java).setAction(DictationService.ACTION_STOP)) } catch (_: Exception) {} }
         val sid = sessionId
         setState(DictationState.Idle)
         _events.emit(DictationEvent.Stopped(sid, reason, flushed))

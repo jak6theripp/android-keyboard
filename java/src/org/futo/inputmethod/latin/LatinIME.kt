@@ -653,6 +653,27 @@ class LatinIME : InputMethodServiceCompose(), LatinIMELegacy.SuggestionStripCont
         uixManager.onInputFinishing()
     }
 
+    /** Path 2 of the nav-bar mic hook: the system selected this keyboard's voice subtype. */
+    override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype?) {
+        super.onCurrentInputMethodSubtypeChanged(newSubtype)
+        if (newSubtype?.mode == "voice") dictationController.onVoiceSubtypeSelected()
+    }
+
+    /** True if Android's current subtype for this IME is the voice one. */
+    fun isVoiceSubtypeCurrent(): Boolean = try {
+        getSystemService(android.view.inputmethod.InputMethodManager::class.java)?.currentInputMethodSubtype?.mode == "voice"
+    } catch (_: Exception) { false }
+
+    /** Leaves the voice subtype so normal typing resumes and a later selection is seen as a change. */
+    fun switchToKeyboardSubtype() {
+        try {
+            val imm = getSystemService(android.view.inputmethod.InputMethodManager::class.java) ?: return
+            val me = imm.enabledInputMethodList.firstOrNull { it.packageName == packageName && it.serviceName == LatinIME::class.java.name } ?: return
+            val keyboard = (0 until me.subtypeCount).map { me.getSubtypeAt(it) }.firstOrNull { it.mode != "voice" } ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) switchInputMethod(me.id, keyboard)
+        } catch (e: Exception) { Log.w("LatinIME", "switchToKeyboardSubtype failed", e) }
+    }
+
     private fun changeInputMethodSubtype(newSubtype: InputMethodSubtype?) {
         latinIMELegacy.onCurrentInputMethodSubtypeChanged(newSubtype)
     }

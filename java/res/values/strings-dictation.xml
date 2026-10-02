@@ -2,6 +2,8 @@
 <!-- Streaming dictation (personal fork). Not translated. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="action_dictation_title">Dictation</string>
+    <string name="dictation_recognition_service_label">Streaming Dictation (keyboard fork)</string>
+    <string name="dictation_voice_subtype_label">Voice dictation</string>
     <string name="action_ai_reply_title">AI reply</string>
     <string name="action_translate_title">Translate</string>
     <string name="action_not_built_yet">Not built yet</string>

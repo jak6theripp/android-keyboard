@@ -64,6 +64,18 @@
              android:foregroundServiceType="microphone"
              android:exported="false"/>
 
+        <!-- Path 1 of the nav-bar mic hook: a system voice-recognition provider. -->
+        <service android:name=".dictation.DictationRecognitionService"
+             android:label="@string/dictation_recognition_service_label"
+             android:icon="@mipmap/ic_launcher"
+             android:exported="true">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+            <meta-data android:name="android.speech" android:resource="@xml/recognition_service"/>
+        </service>
+
         <!-- Debug/test hooks. Callable only by the shell (adb) or the system: requires DUMP. -->
         <receiver android:name=".dictation.DictationDebugReceiver"
              android:exported="true"
@@ -75,6 +87,7 @@
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FIELD"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_CLEANUP"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FAKE_CLEANUP"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_RECOGNIZE"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_CLEANUP_BATCH"/>
             </intent-filter>
         </receiver>

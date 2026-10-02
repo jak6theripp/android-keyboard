@@ -204,6 +204,29 @@ class DictationController(private val latinIME: LatinIME) {
         DictationLog.event("backspace_word", "chars" to n)
     }
 
+    private var nextTriggerPath: String? = null
+    private var startWhenViewReady: String? = null
+    private var returnToPreviousIme = false
+
+    /** The panel asks which path started this session ("keyboard_action" unless something else armed it). */
+    fun consumeTriggerPath(): String = (nextTriggerPath ?: "keyboard_action").also { nextTriggerPath = null }
+
+    /** The system switched this keyboard to its voice subtype: that is a request to dictate. */
+    fun onVoiceSubtypeSelected() {
+        android.util.Log.i("Dictation", "voice subtype selected viewActive=$inputViewActive engine=${engine.state.value}")
+        // If we were not the keyboard on screen, another keyboard handed over just for dictation:
+        // go back to it when the session ends.
+        returnToPreviousIme = !inputViewActive
+        latinIME.switchToKeyboardSubtype()
+        if (engine.isActive) return
+        if (inputViewActive) startVia("voice_subtype") else startWhenViewReady = "voice_subtype"
+    }
+
+    private fun startVia(path: String) {
+        nextTriggerPath = path
+        latinIME.uixManager.triggerActionInternalFromIme(AllActions.indexOf(DictationAction), false)
+    }
+
     /** Debug: start/stop exactly as a tap on the mic action would (opens the panel). */
     fun debugToggle() {
         latinIME.uixManager.triggerActionInternalFromIme(AllActions.indexOf(DictationAction), false)
@@ -221,7 +244,17 @@ class DictationController(private val latinIME: LatinIME) {
         viewGoneJob?.cancel(); viewGoneJob = null
         val key = editorKey(info)
         val sessionAlive = (isLive(engine.state.value) || finalizing) && !detached
-        if (!sessionAlive) { commitOrphanIfSameField(key); return }
+        if (!sessionAlive) {
+            commitOrphanIfSameField(key)
+            // Brought up directly in the voice subtype (or the subtype change arrived before the view).
+            val pending = startWhenViewReady ?: if (latinIME.isVoiceSubtypeCurrent()) "voice_subtype" else null
+            startWhenViewReady = null
+            if (pending != null && !engine.isActive && !finalizing) {
+                latinIME.switchToKeyboardSubtype()
+                latinIME.lifecycleScope.launch(Dispatchers.Main) { if (inputViewActive && !engine.isActive) startVia(pending) }
+            }
+            return
+        }
         // restarting = the app restarted input on the same view (rotation, shade, focus bounce).
         val sameField = restarting || key == sessionEditorKey
         DictationLog.event("ime_start_input_view", "restarting" to restarting, "sameField" to sameField,
@@ -567,6 +600,10 @@ class DictationController(private val latinIME: LatinIME) {
         finalizing = false
         DictationLog.event("controller_stopped", "reason" to reason)
         latinIME.uixManager.closeActionWindowIf(DictationAction)
+        if (returnToPreviousIme) {
+            returnToPreviousIme = false
+            try { if (android.os.Build.VERSION.SDK_INT >= 28) latinIME.switchToPreviousInputMethod() } catch (_: Exception) {}
+        }
     }
 
     private fun resetTextModel() {

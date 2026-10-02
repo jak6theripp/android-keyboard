@@ -64,7 +64,7 @@ private class DictationWindow(val manager: KeyboardManagerForAction, val control
         if (DictationEngine.isActive) {
             if (!DictationEngine.consumeToggleSuppression()) controller.stop("user_toggle")
         } else {
-            controller.start("keyboard_action")
+            controller.start(controller.consumeTriggerPath())
         }
     }
 

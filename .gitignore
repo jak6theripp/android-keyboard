@@ -10,4 +10,5 @@ keystore.properties
 key.jks
 java/res/raw/mozc.data
 .cxx
-java/src/org/futo/inputmethod/keyboard/internal/KeyboardTextsTable.java.kotlin/
+java/src/org/futo/inputmethod/keyboard/internal/KeyboardTextsTable.java
+.kotlin/

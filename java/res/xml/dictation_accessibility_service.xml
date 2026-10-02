@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Opt-in screen reader for AI reply mode. Event types are cleared at runtime: it never receives
+     events and only reads the window when the AI button is pressed. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/dictation_accessibility_description"
+    android:summary="@string/dictation_accessibility_summary"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows"
+    android:notificationTimeout="2000"
+    android:canRetrieveWindowContent="true"
+    android:isAccessibilityTool="false"
+    android:settingsActivity="org.futo.inputmethod.latin.uix.settings.SettingsActivity" />

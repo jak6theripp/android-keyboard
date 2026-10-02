@@ -64,6 +64,18 @@
              android:foregroundServiceType="microphone"
              android:exported="false"/>
 
+        <!-- Opt-in screen reader for AI reply mode. Reads only when the AI button is pressed. -->
+        <service android:name=".dictation.assist.ScreenReaderService"
+             android:label="@string/dictation_accessibility_label"
+             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+             android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService"/>
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice"
+                 android:resource="@xml/dictation_accessibility_service"/>
+        </service>
+
         <!-- Path 1 of the nav-bar mic hook: a system voice-recognition provider. -->
         <service android:name=".dictation.DictationRecognitionService"
              android:label="@string/dictation_recognition_service_label"

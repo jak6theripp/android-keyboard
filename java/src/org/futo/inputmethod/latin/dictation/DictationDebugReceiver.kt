@@ -33,7 +33,8 @@ class DictationDebugReceiver : BroadcastReceiver() {
         when (intent.action) {
             P + "DEBUG_AUDIO" -> {
                 DictationEngine.debugAudioPath = intent.getStringExtra("path")
-                Log.i(TAG, "AUDIO path=${DictationEngine.debugAudioPath}")
+                DictationEngine.debugAudioSticky = intent.getBooleanExtra("sticky", false)
+                Log.i(TAG, "AUDIO path=${DictationEngine.debugAudioPath} sticky=${DictationEngine.debugAudioSticky}")
             }
             P + "DEBUG_TOGGLE" -> {
                 val c = DictationController.instance

@@ -99,6 +99,8 @@ object DictationEngine {
 
     /** Debug: feed this raw 16 kHz mono PCM16 file instead of the microphone for the next session. */
     @Volatile var debugAudioPath: String? = null
+    /** Debug: keep using [debugAudioPath] for every session (unattended testing must never open the real mic). */
+    @Volatile var debugAudioSticky = false
     @Volatile private var injecting = false
     private var injectThread: Thread? = null
     @Volatile private var reopenSuppressed = false
@@ -193,7 +195,7 @@ object DictationEngine {
             lastSpeechAudioOffset = sessionBaseOffset
             lastTranscriptWallMs = SystemClock.elapsedRealtime(); lastPartialBlank = true; lastEouSegment = 0
             val inject = debugAudioPath
-            debugAudioPath = null
+            if (!debugAudioSticky) debugAudioPath = null
             if (inject != null) {
                 startInjection(inject)
                 DictationLog.event("capture_started", "injected" to inject)

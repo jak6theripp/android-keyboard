@@ -86,11 +86,43 @@ private fun VocabEditor() {
     )
 }
 
+@Composable
+private fun SetupSection() {
+    val context = LocalContext.current
+    ScreenTitle(stringResource(R.string.dictation_settings_setup_title))
+    Column(Modifier.padding(16.dp, 4.dp)) {
+        Text(stringResource(
+            if (org.futo.inputmethod.latin.dictation.assist.ScreenReaderService.isEnabled) R.string.dictation_settings_setup_accessibility_on
+            else R.string.dictation_settings_setup_accessibility_off))
+        Text(stringResource(R.string.dictation_settings_setup_accessibility_help), modifier = Modifier.padding(0.dp, 6.dp))
+        Text(stringResource(R.string.dictation_settings_setup_battery_help), modifier = Modifier.padding(0.dp, 6.dp))
+        OutlinedButton(onClick = {
+            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                android.net.Uri.parse("package:" + context.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }) { Text(stringResource(R.string.dictation_settings_setup_open_app_info)) }
+        OutlinedButton(onClick = {
+            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }) { Text(stringResource(R.string.dictation_settings_setup_open_accessibility)) }
+    }
+}
+
+@Composable
+private fun TranslateLanguageSetting() {
+    val setting = useDataStore(org.futo.inputmethod.latin.dictation.DICTATION_TRANSLATE_LANG)
+    ScreenTitle(stringResource(R.string.dictation_settings_translate_language))
+    Column(Modifier.padding(16.dp, 4.dp)) {
+        org.futo.inputmethod.latin.uix.actions.LanguageChips(setting.value) { setting.setValue(it) }
+    }
+}
+
 val DictationMenu = UserSettingsMenu(
     title = R.string.dictation_settings_title,
     navPath = "dictation", registerNavPath = true,
     settings = listOf(
         UserSetting(name = R.string.dictation_settings_keys_title) { ApiKeysSection() },
+        UserSetting(name = R.string.dictation_settings_setup_title) { SetupSection() },
+        UserSetting(name = R.string.dictation_settings_translate_language) { TranslateLanguageSetting() },
 
         UserSetting(name = R.string.dictation_settings_max_delay) {
             SettingSlider(

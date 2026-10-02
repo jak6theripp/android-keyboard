@@ -204,6 +204,45 @@ class DictationController(private val latinIME: LatinIME) {
         DictationLog.event("backspace_word", "chars" to n)
     }
 
+    // ---- instruction capture (AI reply): the transcript goes to a callback, not to the editor ----
+    private class CaptureSink(val onUpdate: (String) -> Unit, val onDone: (String, String) -> Unit)
+    private var captureSink: CaptureSink? = null
+    private val captureFinals = StringBuilder()
+    val isCapturing get() = captureSink != null
+
+    /** Records speech and reports the transcript to the callbacks. Nothing is written to the field. */
+    fun startCapture(triggerPath: String, onUpdate: (String) -> Unit, onDone: (String, String) -> Unit): Boolean {
+        if (engine.isActive || finalizing) return false
+        captureFinals.clear()
+        captureSink = CaptureSink(onUpdate, onDone)
+        ensureCollector()
+        engine.start(latinIME, triggerPath)
+        return true
+    }
+
+    fun cancelCapture() {
+        captureSink = null
+        engine.stop("capture_cancelled")
+    }
+
+    /** Returns true if the event belonged to a capture and must not reach the editor path. */
+    private fun handleCapture(ev: DictationEvent): Boolean {
+        val sink = captureSink
+        return when (ev) {
+            is DictationEvent.Partial -> { sink?.onUpdate(smartJoin(captureFinals.toString(), ev.text.trim())); sink != null }
+            is DictationEvent.Final -> {
+                if (sink != null) { appendFragment(captureFinals, ev.text.trim()); sink.onUpdate(captureFinals.toString()) }
+                sink != null
+            }
+            is DictationEvent.EndOfUtterance -> sink != null
+            is DictationEvent.Stopped -> {
+                if (sink != null) { captureSink = null; sink.onDone(captureFinals.toString().trim(), ev.reason) }
+                sink != null
+            }
+            else -> false
+        }
+    }
+
     private var nextTriggerPath: String? = null
     private var startWhenViewReady: String? = null
     private var returnToPreviousIme = false
@@ -242,6 +281,7 @@ class DictationController(private val latinIME: LatinIME) {
     fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         inputViewActive = true
         viewGoneJob?.cancel(); viewGoneJob = null
+        if (captureSink != null) return
         val key = editorKey(info)
         val sessionAlive = (isLive(engine.state.value) || finalizing) && !detached
         if (!sessionAlive) {
@@ -288,6 +328,7 @@ class DictationController(private val latinIME: LatinIME) {
     fun onFinishInputView(finishingInput: Boolean) {
         inputViewActive = false
         val t = transaction
+        if (captureSink != null) return // the AI window is closed by UixManager and cancels its own capture
         if ((engine.isActive || finalizing) && !detached && t != null && !t.isFinished) {
             DictationLog.event("ime_finish_input_view", "finishingInput" to finishingInput)
             if (finishingInput) {
@@ -333,6 +374,7 @@ class DictationController(private val latinIME: LatinIME) {
     // =====================================================================================
 
     private fun handle(ev: DictationEvent) {
+        if (handleCapture(ev)) return
         when (ev) {
             is DictationEvent.Level -> level.value = ev.rms
             is DictationEvent.IdleCountdown -> idleSecondsLeft.value = ev.secondsLeft

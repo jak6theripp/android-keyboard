@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import org.futo.inputmethod.latin.R
 import org.futo.inputmethod.latin.dictation.DICTATION_CLEANUP_ENABLED
 import org.futo.inputmethod.latin.dictation.DICTATION_DEBUG_LOGGING
+import org.futo.inputmethod.latin.dictation.DICTATION_GATE_SHADOW
 import org.futo.inputmethod.latin.dictation.DICTATION_EOU_SILENCE_S
 import org.futo.inputmethod.latin.dictation.DICTATION_FALLBACK_MIC_KEY
 import org.futo.inputmethod.latin.dictation.DICTATION_NAVBAR_MIC
@@ -191,6 +192,11 @@ val DictationMenu = UserSettingsMenu(
             title = R.string.dictation_settings_debug_logging,
             subtitle = R.string.dictation_settings_debug_logging_subtitle,
             setting = DICTATION_DEBUG_LOGGING
+        ),
+        userSettingToggleDataStore(
+            title = R.string.dictation_settings_gate_shadow,
+            subtitle = R.string.dictation_settings_gate_shadow_subtitle,
+            setting = DICTATION_GATE_SHADOW
         ),
         userSettingToggleDataStore(
             title = R.string.dictation_settings_save_audio,

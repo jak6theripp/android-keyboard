@@ -31,6 +31,9 @@ val DICTATION_FALLBACK_MIC_KEY = SettingsKey(booleanPreferencesKey("dictation_fa
 val DICTATION_NAVBAR_MIC = SettingsKey(booleanPreferencesKey("dictation_navbar_mic"), true)
 /** Target language for the Translate action (a language name; the last choice is remembered). */
 val DICTATION_TRANSLATE_LANG = SettingsKey(stringPreferencesKey("dictation_translate_language"), "Spanish")
+/** SPIKE shadow eval: the cleanup gate decides (and logs) whether it WOULD skip Claude; Claude still runs and is
+ * authoritative. On = also turn the on-device JSONL log on so the comparison is recorded. No effect on typed text. */
+val DICTATION_GATE_SHADOW = SettingsKey(booleanPreferencesKey("dictation_gate_shadow"), true)
 val DICTATION_DEBUG_LOGGING = SettingsKey(booleanPreferencesKey("dictation_debug_logging"), false)
 val DICTATION_SAVE_AUDIO = SettingsKey(booleanPreferencesKey("dictation_save_audio"), false)
 val DICTATION_LANGUAGE = SettingsKey(stringPreferencesKey("dictation_language"), "en")

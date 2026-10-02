@@ -21,6 +21,7 @@ import org.futo.inputmethod.engine.general.DictationTransactionIME
 import org.futo.inputmethod.latin.LatinIME
 import org.futo.inputmethod.latin.R
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupClient
+import org.futo.inputmethod.latin.dictation.cleanup.CleanupGate
 import org.futo.inputmethod.latin.dictation.cleanup.Cleaner
 import org.futo.inputmethod.latin.dictation.cleanup.LocalCleaner
 import org.futo.inputmethod.latin.dictation.cleanup.PauseHeuristics
@@ -85,6 +86,9 @@ class DictationController(private val latinIME: LatinIME) {
     private val seenSegments = HashSet<Long>()
     /** Raw final words of the open utterance (may start with carried sentence punctuation). */
     private val pendingRaw = StringBuilder()
+    // SPIKE shadow eval: per-word confidence for the words now in pendingRaw.
+    private val pendingWords = ArrayList<CleanupGate.Word>()
+    private var shadowGate = false
     private var partial = ""                   // provisional tail as displayed (after spoken replacements)
     private var partialRaw = ""                // provisional tail as received
     private var composingShown = ""            // what we believe the editor's composing region holds
@@ -99,7 +103,8 @@ class DictationController(private val latinIME: LatinIME) {
      * [lead] = sentence punctuation carried over from the previous utterance (the boundary the
      * cleanup pass rules on), [raw] = the words, [trail] = sentence punctuation deferred to the next.
      */
-    private class Utterance(val id: Int, val lead: String, val raw: String, val trail: String, val isLast: Boolean, val context: String) {
+    private class Utterance(val id: Int, val lead: String, val raw: String, val trail: String, val isLast: Boolean, val context: String,
+                            val gate: CleanupGate.Decision? = null) {
         val sentAt = SystemClock.elapsedRealtime()
         var job: Job? = null
     }
@@ -425,6 +430,7 @@ class DictationController(private val latinIME: LatinIME) {
                     commitText(text.applySpokenReplacements(), "seg" to ev.segmentId)
                     return
                 }
+                if (ev.words.isNotEmpty()) ev.words.forEach { pendingWords.add(CleanupGate.Word(it.content, it.confidence, it.isPunctuation)) }
                 appendFragment(pendingRaw, finalRaw)
                 renderJob?.cancel(); render()
                 maybeCloseUtterance(if (wordCount(pendingRaw) >= SIZE_CLOSE_WORDS) "size" else "sentence")
@@ -469,6 +475,7 @@ class DictationController(private val latinIME: LatinIME) {
         vocabulary = ctx.getSetting(DICTATION_VOCAB).toVocabList()
         hardFailures = 0
         usingClaude = false
+        shadowGate = latinIME.applicationContext.getSetting(DICTATION_GATE_SHADOW)
         if (debugFakeCleanupMs > 0) {
             cleanup = LocalCleaner(debugFakeCleanupMs); cleanupActive = true
             DictationLog.event("cleanup_local", "why" to "debug", "ms" to debugFakeCleanupMs)
@@ -540,9 +547,19 @@ class DictationController(private val latinIME: LatinIME) {
         val withLead = full.dropLast(trail.length).trimEnd()
         val lead = withLead.takeWhile { it in SENTENCE_PUNCT }
         val body = withLead.drop(lead.length).trimStart()
-        pendingRaw.clear()
+        val gateWords = ArrayList(pendingWords)
+        pendingRaw.clear(); pendingWords.clear()
         val context = committedTail.toString().takeLast(CONTEXT_CHARS)
-        val u = Utterance(++utteranceCounter, lead, body, trail, isLast, context)
+        // SPIKE shadow eval: record what the gate WOULD decide and the per-word confidence. Changes no text.
+        val gate = if (shadowGate) CleanupGate.inspect(body, gateWords, vocabulary, lead, context) else null
+        if (gate != null) {
+            val spoken = gateWords.filter { !it.isPunctuation }
+            val minC = spoken.minOfOrNull { it.confidence } ?: 1f
+            DictationLog.event("gate", "utt" to (utteranceCounter + 1), "clean" to gate.clean, "reason" to gate.reason,
+                "minConf" to "%.2f".format(minC),
+                "confWords" to spoken.joinToString(" ") { "${it.content}:${"%.2f".format(it.confidence)}" })
+        }
+        val u = Utterance(++utteranceCounter, lead, body, trail, isLast, context, gate)
         inFlight = u
         DictationLog.event("cleanup_request", "utt" to u.id, "trigger" to trigger, "lead" to lead, "raw" to body, "trail" to trail, "words" to wordCount(body))
         val client = cleanup
@@ -600,7 +617,23 @@ class DictationController(private val latinIME: LatinIME) {
                 decision += if (u.lead.isNotEmpty() && local.join) "+local_join" else "+local"
             }
         }
-        // Only apply if the provisional text is still exactly as it was: never overwrite what the user touched.
+        // SPIKE shadow eval. Claude's `text` is authoritative. Work out what a gate SKIP would have
+        // committed (the local rules only) and whether that differs: a different result on a segment the
+        // gate called clean is a FALSE CLEAN - the exact thing we must drive to zero before shipping.
+        u.gate?.let { g ->
+            val rawJoined = smartJoin(u.lead, u.raw)
+            val lc = LocalCleaner().clean(CleanupRequest(u.context, u.lead, u.raw, vocabulary))
+            val localText = if (lc is CleanupResponse.Ok) {
+                if (u.lead.isNotEmpty() && !lc.join) smartJoin(u.lead, lc.text) else lc.text
+            } else rawJoined
+            val claudeOk = response is CleanupResponse.Ok && decision.startsWith("accept")
+            val claudeChanged = text.trim() != rawJoined.trim()
+            val falseClean = g.clean && localText.trim() != text.trim()
+            DictationLog.event("shadow", "utt" to u.id, "gateClean" to g.clean, "gateReason" to g.reason,
+                "claudeOk" to claudeOk, "claudeChanged" to claudeChanged, "falseClean" to falseClean,
+                "waitedMs" to waited, "raw" to rawJoined, "claude" to text, "local" to localText)
+        }
+                // Only apply if the provisional text is still exactly as it was: never overwrite what the user touched.
         if (!composingIntact()) {
             DictationLog.event("cleanup_decision", "utt" to u.id, "decision" to "discard_user_edit", "waitedMs" to waited)
             freezeForUserEdit("verify_cleanup")
@@ -660,7 +693,7 @@ class DictationController(private val latinIME: LatinIME) {
     }
 
     private fun resetTextModel() {
-        pendingRaw.clear(); partial = ""; partialRaw = ""; composingShown = ""; strandedComposing = ""
+        pendingRaw.clear(); pendingWords.clear(); partial = ""; partialRaw = ""; composingShown = ""; strandedComposing = ""
         committedTail.clear()
     }
 

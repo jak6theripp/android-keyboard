@@ -81,6 +81,8 @@
     <string name="dictation_settings_fallback_mic_key_subtitle">Put a mic key at the bottom-left of the bottom row</string>
     <string name="dictation_settings_debug_logging">Debug logging</string>
     <string name="dictation_settings_debug_logging_subtitle">Log every partial, final, cleanup decision and timing to a local file</string>
+    <string name="dictation_settings_gate_shadow">Cleanup gate shadow test</string>
+    <string name="dictation_settings_gate_shadow_subtitle">Records, in the on-device log, whether a confidence/heuristic gate would have skipped the Claude cleanup call and whether that skip would have been wrong. Does not change typed text. Turn off to stop recording.</string>
     <string name="dictation_settings_save_audio">Save audio (debug)</string>
     <string name="dictation_settings_save_audio_subtitle">Also save raw microphone audio to the log directory. Off by default.</string>
     <string name="dictation_settings_export_logs">Export logs</string>

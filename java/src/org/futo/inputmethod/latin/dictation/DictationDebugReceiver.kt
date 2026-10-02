@@ -9,6 +9,8 @@ import org.futo.inputmethod.latin.dictation.cleanup.CleanupGuard
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupRequest
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupResponse
 import org.futo.inputmethod.latin.dictation.cleanup.PauseHeuristics
+import org.futo.inputmethod.latin.dictation.cleanup.Cleaner
+import org.futo.inputmethod.latin.dictation.cleanup.NanoCleaner
 import org.futo.inputmethod.latin.uix.getSetting
 
 /**
@@ -28,6 +30,14 @@ class DictationDebugReceiver : BroadcastReceiver() {
         private const val TAG = "DictationDebug"
         private const val P = "org.futo.inputmethod.latin.dictation."
         private var debugRecognizer: android.speech.SpeechRecognizer? = null
+    }
+
+    /** How Android currently ranks this process (100 = foreground, 125 = foreground service, 200 = visible, 230 = perceptible). */
+    private fun processState(): String {
+        val info = android.app.ActivityManager.RunningAppProcessInfo()
+        android.app.ActivityManager.getMyMemoryState(info)
+        val c = DictationController.instance
+        return "importance=${info.importance} imeViewActive=${c?.isInputViewActive}"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -78,6 +88,24 @@ class DictationDebugReceiver : BroadcastReceiver() {
                 c?.debugNavBar(intent.getStringExtra("class"), intent.getIntExtra("position", 0), intent.getIntExtra("priority", 5))
                 Log.i(TAG, "NAVBAR controller=${c != null} class=${NavBarMic.requestClass} position=${NavBarMic.position} priority=${NavBarMic.priority}")
             }
+            P + "DEBUG_NANO" -> {
+                // SPIKE. op=status (default) | download. Runs after the receiver has returned, like the batch.
+                val op = intent.getStringExtra("op") ?: "status"
+                Thread {
+                    try {
+                        Thread.sleep(1500)
+                        val n = NanoCleaner("")
+                        Log.i(TAG, "NANO ${processState()} ${n.statusReport()}")
+                        if (op == "download") {
+                            val ok = n.download { Log.i(TAG, "NANO $it") }
+                            Log.i(TAG, "NANO download ok=$ok ${n.statusReport()}")
+                        }
+                        n.close()
+                    } catch (e: Throwable) {
+                        Log.i(TAG, "NANO error=${e.javaClass.simpleName}: ${e.message}")
+                    }
+                }.start()
+            }
             P + "DEBUG_STOP" -> { DictationEngine.stop("debug"); Log.i(TAG, "STOP") }
             P + "DEBUG_FIELD" -> {
                 val text = DictationController.instance?.debugTextBeforeCursor(6000)
@@ -88,15 +116,27 @@ class DictationDebugReceiver : BroadcastReceiver() {
                 val ctx = context.applicationContext
                 val casesPath = intent.getStringExtra("cases") ?: return
                 val promptPath = intent.getStringExtra("prompt")
-                val pending = goAsync()
+                // SPIKE: engine=nano runs the same cases on the on-device Gemini Nano. The receiver returns first
+                // and the work starts 1.5 s later, so the process is in its plain keyboard state, not "receiving".
+                val nano = intent.getStringExtra("engine") == "nano"
+                val pending = if (nano) null else goAsync()
                 Thread {
                     try {
-                        val key = SecureKeys.get(ctx, SecureKeys.KEY_ANTHROPIC)
-                        if (key == null) { Log.i(TAG, "BATCH error=no_key"); return@Thread }
                         val prompt = promptPath?.let { java.io.File(it).readText().trim() } ?: CleanupClient.loadPrompt(ctx)
-                        val client = CleanupClient(key, prompt)
+                        val client: Cleaner
+                        if (nano) {
+                            Thread.sleep(1500)
+                            val n = NanoCleaner(prompt)
+                            Log.i(TAG, "BATCH engine=nano ${processState()} ${n.statusReport()}")
+                            client = n
+                        } else {
+                            val key = SecureKeys.get(ctx, SecureKeys.KEY_ANTHROPIC)
+                            if (key == null) { Log.i(TAG, "BATCH error=no_key"); return@Thread }
+                            client = CleanupClient(key, prompt)
+                        }
                         val vocab = ctx.getSetting(DICTATION_VOCAB).toVocabList()
-                        client.warmUp()
+                        val warm = client.warmUp()
+                        if (nano) Log.i(TAG, "BATCH warmup=$warm")
                         val cases = kotlinx.serialization.json.Json.parseToJsonElement(java.io.File(casesPath).readText()) as kotlinx.serialization.json.JsonArray
                         for (c in cases) {
                             val o = c as kotlinx.serialization.json.JsonObject
@@ -115,7 +155,7 @@ class DictationDebugReceiver : BroadcastReceiver() {
                         Log.i(TAG, "BATCH done n=${cases.size}")
                     } catch (e: Exception) {
                         Log.i(TAG, "BATCH error=${e.javaClass.simpleName}: ${e.message}")
-                    } finally { pending.finish() }
+                    } finally { pending?.finish() }
                 }.start()
             }
             P + "DEBUG_CLEANUP" -> {

@@ -196,7 +196,7 @@ android {
     useLibrary 'android.test.mock'
 
     defaultConfig {
-        minSdk 24
+        minSdk 26
         targetSdk 35
         versionName getVersionName()
         versionCode getVersionCode()
@@ -390,6 +390,8 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
+        // SPIKE: genai-prompt 1.0.0-beta4 (and the stdlib it pulls in) carry Kotlin 2.3 metadata; this project compiles with 2.1
+        freeCompilerArgs += ['-Xskip-metadata-version-check']
     }
     buildFeatures {
         compose true
@@ -402,6 +404,13 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+    }
+}
+
+// SPIKE: genai-prompt asks for kotlin-stdlib 2.3.x, which the 2.1 compiler back-end cannot build against
+configurations.configureEach {
+    resolutionStrategy {
+        force 'org.jetbrains.kotlin:kotlin-stdlib:2.1.0'
     }
 }
 
@@ -439,6 +448,8 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     // Dictation cleanup pass: official Anthropic SDK (Kotlin uses the Java SDK)
     implementation 'com.anthropic:anthropic-java-client-okhttp:2.68.0'
+    // SPIKE (nano-spike branch): on-device Gemini Nano through ML Kit GenAI Prompt API
+    implementation 'com.google.mlkit:genai-prompt:1.0.0-beta4'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.7.1'
 

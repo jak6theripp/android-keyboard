@@ -99,6 +99,7 @@
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_TOGGLE"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_STOP"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_NAVBAR"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_NANO"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FIELD"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_CLEANUP"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FAKE_CLEANUP"/>

@@ -4,7 +4,8 @@ The keyboard must be showing in a text field: Android blocks the app's network w
 background (every case then fails with 'network' in 1-2 ms). The reported join/out is what the app would
 type, i.e. after the PauseHeuristics JOIN override.
 
-Usage:  python run_eval.py [prompt.txt]      (ADB and ADB_SERIAL env vars are honoured)
+Usage:  python run_eval.py [--engine nano] [prompt.txt]      (ADB and ADB_SERIAL env vars are honoured)
+        --engine nano (spike branch) runs the cases on the phone's Gemini Nano instead of Claude.
         Without an argument the working copy of java/assets/dictation/cleanup_prompt.txt is used,
         so a prompt change can be evaluated without rebuilding the app.
 
@@ -27,18 +28,24 @@ def adb(*args, **kw):
 
 def main():
     cases = json.load(io.open(os.path.join(HERE, "cases.json"), encoding="utf-8"))
-    prompt = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "..", "java", "assets", "dictation", "cleanup_prompt.txt")
+    argv = sys.argv[1:]
+    engine = "claude"
+    if "--engine" in argv:
+        i = argv.index("--engine"); engine = argv[i + 1]; del argv[i:i + 2]
+    prompt = argv[0] if argv else os.path.join(HERE, "..", "..", "java", "assets", "dictation", "cleanup_prompt.txt")
     adb("shell", "mkdir", "-p", REMOTE)
     adb("push", os.path.join(HERE, "cases.json"), REMOTE + "/eval-cases.json")
     extra = ["--es", "cases", REMOTE + "/eval-cases.json"]
     if prompt:
         adb("push", prompt, REMOTE + "/eval-prompt.txt")
         extra += ["--es", "prompt", REMOTE + "/eval-prompt.txt"]
+    if engine != "claude":
+        extra += ["--es", "engine", engine]
     adb("logcat", "-c")
     adb("shell", "am", "broadcast", "-n", PKG + "/.dictation.DictationDebugReceiver",
         "-a", PKG + ".dictation.DEBUG_CLEANUP_BATCH", *extra)
     out = ""
-    for _ in range(90):
+    for _ in range(90 if engine == "claude" else 600):
         time.sleep(1)
         out = adb("logcat", "-d", "-v", "raw", "-s", "DictationDebug:V").stdout
         if "BATCH done" in out or "BATCH error" in out:
@@ -48,7 +55,7 @@ def main():
         m = re.match(r"BATCH id=(\S+) ms=(\d+) verdict=(\S+) edits=(\S+) (?:forced=\S+ )?join=(\S+) out=\[(.*)\]$", line)
         if m:
             results[m.group(1)] = dict(ms=int(m.group(2)), verdict=m.group(3), edits=m.group(4), join=(m.group(5) == "true"), out=m.group(6))
-        elif "failed=" in line or "BATCH error" in line:
+        elif "failed=" in line or "BATCH error" in line or "BATCH engine=" in line or "BATCH warmup=" in line:
             print(line)
     passed = 0
     lat = []

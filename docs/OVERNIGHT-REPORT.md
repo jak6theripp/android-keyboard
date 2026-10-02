@@ -53,3 +53,27 @@ Phases 2–6 were built unattended after Phase 1 was signed off. Each has its ow
 - `tools/dictation-eval/run_eval.py` — cleanup prompt eval on the phone (uses the key stored on the phone).
 - `tools/dictation-eval/run_audio_test.py <clip.wav>` — end-to-end dictation with an injected clip instead of the mic.
 - Clips used: `D:\VoiceTextProject\testaudio\` (Windows TTS; not in the repo).
+
+## Update — 2026-10-02 morning (Anthropic credit restored)
+
+Verified on the device with real Claude calls (cover screen, Chrome search box, injected TTS audio; the live mic was never opened):
+
+- **Cleanup eval: 32/35**, latency median 713 ms, p90 825 ms, max 918 ms. The three misses:
+  - p02 (context ends "because") and p05 (context ends with a lone "So"): model said BREAK. The app overrides both to JOIN
+    (`PauseHeuristics.endsUnfinished`), so the typed result is right; effective score in the app is 34/35.
+  - p06 ("I can talk naturally" + "Pause. Naturally. And the…"): the model kept a sentence break. Left as is; ambiguous even for a reader.
+- **End-to-end dictation with the real cleaner** (`run_audio_test.py t1_pauses.wav`): four utterances, each cleaned in 600–770 ms,
+  pause-periods removed, "The Mower Medic" / "carburetor" kept, final period committed at stop. Result:
+  "Can't really test the airplane mode thing because opening the top menu by swiping down stops the dictation, so that is not a test
+  that I can do. It looks to me like The Mower Medic needs a new carburetor."
+- **Translate**: English → Spanish preview appeared in ~5 s; Replace swapped the whole field; nothing changed before Replace.
+- **AI reply** (screen reading off): spoken instruction "Tell him I will have the mower done Friday. But the carburetor needs
+  replacing." → draft "I'll have the mower done Friday, but the carburetor needs replacing" as composing text; Discard removed it.
+  Keep and Redo were not pressed.
+
+Finding: **Android blocks this app's network while the keyboard is not on screen** (`netpolicy` shows `blocked=APP_BACKGROUND`; DNS
+fails instantly, reported as `failed=network`). This only affects the adb eval tool, which must be run with the keyboard showing in
+a text field. Dictation itself always runs with the keyboard up or under the microphone foreground service.
+
+Still not verified: real voice through the cleanup path, AI reply with screen reading on, Keep/Redo, inner screen, offline Whisper
+route, Samsung Pass.

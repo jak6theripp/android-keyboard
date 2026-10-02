@@ -174,7 +174,7 @@ private class DictationWindow(val manager: KeyboardManagerForAction, val control
      * (fold, rotation, field change) must not stop the session; the controller decides that.
      */
     override fun close(): CloseResult {
-        if (controller.isInputViewActive && DictationEngine.isActive) controller.stop("window_closed")
+        if (controller.isInputViewActive && !controller.isReattaching && DictationEngine.isActive) controller.stop("window_closed")
         return CloseResult.Default
     }
 }

@@ -377,9 +377,15 @@ object DictationEngine {
                 val wallSinceSpeechS = ((SystemClock.elapsedRealtime() - lastSpeechActivityMs) / 1000).toInt()
                 val silentS = minOf(audioSinceSpeechS, wallSinceSpeechS)
                 val left = idleTimeoutS - silentS
-                if (left <= IDLE_WARN_S && left != lastWarned) {
-                    lastWarned = left
-                    _events.emit(DictationEvent.IdleCountdown(left.coerceAtLeast(0)))
+                if (left <= IDLE_WARN_S) {
+                    if (left != lastWarned) {
+                        lastWarned = left
+                        _events.emit(DictationEvent.IdleCountdown(left.coerceAtLeast(0)))
+                    }
+                } else if (lastWarned != -1) {
+                    // Speech resumed: withdraw the warning.
+                    lastWarned = -1
+                    _events.emit(DictationEvent.IdleCountdown(-1))
                 }
                 if (left <= 0) {
                     DictationLog.event("idle_timeout", "silentS" to silentS)

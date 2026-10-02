@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import org.futo.inputmethod.engine.general.DictationTransactionIME
 import org.futo.inputmethod.latin.LatinIME
 import org.futo.inputmethod.latin.R
+import org.futo.inputmethod.latin.uix.actions.AllActions
 import org.futo.inputmethod.latin.uix.actions.DictationAction
 
 /**
@@ -29,6 +30,11 @@ import org.futo.inputmethod.latin.uix.actions.DictationAction
  *   partial tail    – composing, dimmed + underlined (best-effort styling)
  */
 class DictationController(private val latinIME: LatinIME) {
+    private companion object {
+        /** How long the mic may stay hot with the keyboard view hidden but the field still bound. */
+        const val VIEW_GONE_GRACE_MS = 20_000L
+    }
+
     private val engine = DictationEngine
 
     private var transaction: DictationTransactionIME? = null
@@ -80,10 +86,27 @@ class DictationController(private val latinIME: LatinIME) {
         if (!inputViewActive || latinIME.currentInputConnection == null) {
             lastError.value = "no input field"; return
         }
+        sessionEditorKey = editorKey(latinIME.currentInputEditorInfo)
+        backlog.clear()
         ensureTransaction()
         ensureCollector()
         engine.start(latinIME, triggerPath)
     }
+
+    /** Identity of an editor field. Input type is excluded: apps change its flags when they restart input. */
+    private fun editorKey(info: EditorInfo?): String = "${info?.packageName}/${info?.fieldId}"
+
+    /** Which editor the live session types into. */
+    private var sessionEditorKey = ""
+    /** Finals received while the keyboard view was hidden (notification shade etc.), oldest first. */
+    private val backlog = ArrayList<String>()
+    /** Backlog left over from a session that ended while the view was hidden. */
+    private var orphanText: String? = null
+    private var orphanKey = ""
+    private var orphanAtMs = 0L
+    /** True while the controller itself re-opens the panel; the panel must not treat that as a stop. */
+    var isReattaching = false
+        private set
 
     fun stop(reason: String) { engine.stop(reason) }
 
@@ -97,16 +120,54 @@ class DictationController(private val latinIME: LatinIME) {
         val st = engine.state.value
         val live = st == DictationState.Starting || st == DictationState.Listening ||
                 st == DictationState.Reconnecting || st == DictationState.Paused
-        if (!live || detached) return
-        // View (re)created mid-session (fold/unfold, rotation): re-anchor at the current cursor.
-        DictationLog.event("ime_start_input_view", "restarting" to restarting)
+        val key = editorKey(info)
+        if (!live || detached) { commitOrphanIfSameField(key); return }
+        // restarting = the app restarted input on the same view (rotation, shade, focus bounce).
+        val sameField = restarting || key == sessionEditorKey
+        DictationLog.event("ime_start_input_view", "restarting" to restarting, "sameField" to sameField,
+            "backlog" to backlog.size, "key" to key, "sessionKey" to sessionEditorKey)
+        if (!sameField) {
+            // The keyboard came back on a different field: this session's text does not belong here.
+            detached = true
+            if (backlog.isNotEmpty()) DictationLog.event("backlog_dropped", "why" to "field_changed", "segments" to backlog.size)
+            backlog.clear()
+            engine.stop("field_changed")
+            return
+        }
+        // View (re)created mid-session (rotation, shade closed): re-anchor at the current cursor.
         composingShown = ""; partial = ""; partialRaw = ""
         needsLeadingSpace = true
         ensureTransaction()
         ensureCollector()
+        flushBacklog()
         // The action window was closed by UixManager; reopen it without toggling the session.
-        engine.suppressNextToggle()
-        latinIME.uixManager.onActionActivated(DictationAction)
+        isReattaching = true
+        try {
+            engine.suppressNextToggle()
+            latinIME.uixManager.triggerActionInternalFromIme(AllActions.indexOf(DictationAction), false)
+        } finally { isReattaching = false }
+    }
+
+    /** Commits what was said while the keyboard view was hidden. */
+    private fun flushBacklog() {
+        val t = transaction ?: return
+        if (backlog.isEmpty() || t.isFinished) return
+        if (t.textBeforeCursor(1) == null) return // editor still unreachable; keep holding
+        val text = backlog.joinToString(" ")
+        backlog.clear()
+        val toCommit = withSpacing(text)
+        t.commitText(toCommit)
+        DictationLog.event("backlog_flushed", "text" to toCommit)
+    }
+
+    /** A session ended while hidden; if the same field is back soon, its unseen text is still wanted. */
+    private fun commitOrphanIfSameField(key: String) {
+        val text = orphanText ?: return
+        val fresh = SystemClock.elapsedRealtime() - orphanAtMs < 120_000
+        orphanText = null
+        if (!fresh || key != orphanKey) { DictationLog.event("orphan_dropped", "fresh" to fresh); return }
+        latinIME.latinIMELegacy.onTextInputWithSpace(text)
+        DictationLog.event("orphan_committed", "text" to text)
     }
 
     /** Must run BEFORE IMEManager.onFinishInput() ends the transaction. */
@@ -128,11 +189,12 @@ class DictationController(private val latinIME: LatinIME) {
                 // so remove it now instead of leaving a copy behind.
                 if (composingShown.isNotEmpty()) t.setComposing("")
                 pending.clear(); partial = ""; partialRaw = ""; composingShown = ""
-                // Fold/rotation brings the view back within moments. If it doesn't come back, the
-                // keyboard was dismissed: don't leave a hot mic with nowhere to type.
+                // Rotation brings the view back within moments; the notification shade keeps it
+                // hidden for as long as it is open. Keep listening (finals are held in the
+                // backlog) but don't leave a hot mic indefinitely with nowhere to type.
                 viewGoneJob?.cancel()
                 viewGoneJob = latinIME.lifecycleScope.launch(Dispatchers.Main.immediate) {
-                    delay(3000)
+                    delay(VIEW_GONE_GRACE_MS)
                     if (!inputViewActive && engine.isActive) engine.stop("input_view_gone")
                 }
             }
@@ -229,6 +291,13 @@ class DictationController(private val latinIME: LatinIME) {
             is DictationEvent.Stopped -> {
                 if (ev.sessionId != sessionId && sessionId != 0L) return
                 idleSecondsLeft.value = -1
+                if (backlog.isNotEmpty()) {
+                    // Ended while the view was hidden: hold the unseen text for this same field.
+                    orphanText = backlog.joinToString(" "); orphanKey = sessionEditorKey
+                    orphanAtMs = SystemClock.elapsedRealtime()
+                    DictationLog.event("backlog_orphaned", "segments" to backlog.size)
+                    backlog.clear()
+                }
                 // Anything still provisional becomes real text; nothing is lost.
                 val t = transaction
                 if (t != null && !t.isFinished && !detached) {
@@ -290,8 +359,17 @@ class DictationController(private val latinIME: LatinIME) {
 
     /** Phase 1: commit finals immediately (cleanup arrives in Phase 2). */
     private fun commitSegment(segmentId: Long, text: String) {
-        val t = transaction ?: return
-        if (t.isFinished || text.isEmpty()) return
+        if (text.isEmpty()) return
+        val t = transaction
+        // A null answer means the editor is not reachable right now (view hidden, shade taking
+        // focus). Writing into that would be silently dropped, so hold the text instead.
+        val reachable = t != null && !t.isFinished && t.textBeforeCursor(1) != null
+        if (t == null || !reachable) {
+            backlog.add(text)
+            DictationLog.event("backlog_add", "seg" to segmentId, "text" to text, "hasTransaction" to (t != null))
+            return
+        }
+        if (backlog.isNotEmpty()) flushBacklog()
         renderJob?.cancel()
         // One atomic edit: drop the provisional tail, commit the final, re-show the remainder.
         t.beginBatch()
@@ -326,7 +404,11 @@ class DictationController(private val latinIME: LatinIME) {
         if (text.isEmpty()) return text
         if (composingShown.isEmpty()) {
             val before = transaction?.textBeforeCursor(1)
-            spaceNeededBeforeComposing = !before.isNullOrEmpty() && !before.last().isWhitespace()
+            spaceNeededBeforeComposing = when {
+                before == null -> true              // editor didn't answer: we are mid-text, not at field start
+                before.isEmpty() -> false           // really at the start of the field
+                else -> !before.last().isWhitespace()
+            }
         }
         val startsWithPunct = text.first() in ".,!?;:)]}%…"
         return if (spaceNeededBeforeComposing && !startsWithPunct) " $text" else text

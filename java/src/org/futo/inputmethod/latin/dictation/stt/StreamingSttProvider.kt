@@ -14,13 +14,17 @@ data class SttConfig(
     val sampleRate: Int = 16000,
 )
 
+/** One recognized token with the recognizer's confidence (0..1; 1 = most confident). */
+data class SttWord(val content: String, val confidence: Float, val isPunctuation: Boolean)
+
 /** Events from a provider. [generation] is stamped by the engine, not the provider. */
 sealed class SttEvent {
     data class Started(val sessionId: String) : SttEvent()
     /** Provisional text for audio after the last final. Whole-partial replace semantics. */
     data class Partial(val text: String, val startTime: Float, val endTime: Float) : SttEvent()
     /** Final text for [startTime, endTime]. Never changes afterwards. */
-    data class Final(val text: String, val startTime: Float, val endTime: Float, val forced: Boolean) : SttEvent()
+    data class Final(val text: String, val startTime: Float, val endTime: Float, val forced: Boolean,
+                     val words: List<SttWord> = emptyList()) : SttEvent()
     data class EndOfUtterance(val endTime: Float) : SttEvent()
     data class Warning(val type: String, val reason: String) : SttEvent()
     /** Session is over after this. [retryable] = reconnect makes sense. */

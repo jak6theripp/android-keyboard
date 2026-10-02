@@ -34,7 +34,8 @@ enum class DictationState { Idle, Starting, Listening, Reconnecting, Paused, Sto
 /** Events for the text controller. Every text event carries the session and a segment id. */
 sealed class DictationEvent {
     data class Partial(val sessionId: Long, val segmentId: Long, val text: String, val audioStartMs: Long, val audioEndMs: Long) : DictationEvent()
-    data class Final(val sessionId: Long, val segmentId: Long, val text: String, val speechEndMs: Long, val audioStartMs: Long, val audioEndMs: Long) : DictationEvent()
+    data class Final(val sessionId: Long, val segmentId: Long, val text: String, val speechEndMs: Long, val audioStartMs: Long, val audioEndMs: Long,
+                     val words: List<org.futo.inputmethod.latin.dictation.stt.SttWord> = emptyList()) : DictationEvent()
     data class EndOfUtterance(val sessionId: Long, val lastSegmentId: Long) : DictationEvent()
     data class IdleCountdown(val secondsLeft: Int) : DictationEvent()
     data class Level(val rms: Float) : DictationEvent()
@@ -372,7 +373,12 @@ object DictationEngine {
                 // Speech end → now latency: how far behind real time the final arrived.
                 val speechEndMs = (ring.totalWritten - timeToAbsOffset(ev.endTime)) * 1000 / AudioCapture.BYTES_PER_SECOND
                 DictationLog.event("final", "seg" to id, "text" to ev.text, "t0" to ev.startTime, "t1" to ev.endTime, "forced" to ev.forced, "lagMs" to speechEndMs)
-                _events.emit(DictationEvent.Final(sessionId, id, ev.text, speechEndMs, timeToAbsMs(ev.startTime), timeToAbsMs(ev.endTime)))
+                if (ev.words.isNotEmpty()) {
+                    val sp = ev.words.filter { !it.isPunctuation }
+                    val minC = sp.minOfOrNull { it.confidence } ?: 1f
+                    DictationLog.event("final_conf", "seg" to id, "min" to "%.2f".format(minC), "n" to sp.size)
+                }
+                _events.emit(DictationEvent.Final(sessionId, id, ev.text, speechEndMs, timeToAbsMs(ev.startTime), timeToAbsMs(ev.endTime), ev.words))
             }
             is SttEvent.EndOfUtterance -> {
                 DictationLog.event("end_of_utterance", "lastSeg" to segmentCounter, "t1" to ev.endTime, "source" to "recognizer")

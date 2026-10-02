@@ -136,7 +136,7 @@ class SpeechmaticsProvider(private val url: String) : StreamingSttProvider {
                 obj.transcript(), obj.meta("start_time"), obj.meta("end_time")))
             "AddTranscript" -> emit(SttEvent.Final(
                 obj.transcript(), obj.meta("start_time"), obj.meta("end_time"),
-                obj["forced"]?.jsonPrimitive?.booleanOrNull == true))
+                obj["forced"]?.jsonPrimitive?.booleanOrNull == true, obj.words()))
             "EndOfUtterance" -> emit(SttEvent.EndOfUtterance(obj.meta("end_time")))
             "EndOfTranscript" -> emit(SttEvent.EndOfTranscript)
             "Info" -> Log.i(TAG, "info ${obj.str("type")}: ${obj.str("reason")}")
@@ -149,6 +149,20 @@ class SpeechmaticsProvider(private val url: String) : StreamingSttProvider {
             }
             else -> Log.d(TAG, "unhandled ${obj.str("message")}")
         }
+    }
+
+    /** Per-word confidence from results[].alternatives[0]; empty when the server did not send them. */
+    private fun JsonObject.words(): List<SttWord> {
+        val results = this["results"] as? kotlinx.serialization.json.JsonArray ?: return emptyList()
+        val out = ArrayList<SttWord>(results.size)
+        results.forEach { r ->
+            val o = r.jsonObject
+            val alt = (o["alternatives"] as? kotlinx.serialization.json.JsonArray)?.firstOrNull()?.jsonObject ?: return@forEach
+            val content = alt["content"]?.jsonPrimitive?.content ?: return@forEach
+            val conf = alt["confidence"]?.jsonPrimitive?.floatOrNull ?: 1f
+            out.add(SttWord(content, conf, o["type"]?.jsonPrimitive?.content == "punctuation"))
+        }
+        return out
     }
 
     private fun JsonObject.str(k: String): String? = this[k]?.jsonPrimitive?.let { if (it.isString) it.content else it.content }

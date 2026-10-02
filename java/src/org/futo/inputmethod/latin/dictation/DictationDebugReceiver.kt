@@ -9,6 +9,8 @@ import org.futo.inputmethod.latin.dictation.cleanup.CleanupGuard
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupRequest
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupResponse
 import org.futo.inputmethod.latin.dictation.cleanup.PauseHeuristics
+import org.futo.inputmethod.latin.dictation.cleanup.CleanupGate
+import org.futo.inputmethod.latin.dictation.cleanup.LocalCleaner
 import org.futo.inputmethod.latin.uix.getSetting
 
 /**
@@ -115,6 +117,46 @@ class DictationDebugReceiver : BroadcastReceiver() {
                         Log.i(TAG, "BATCH done n=${cases.size}")
                     } catch (e: Exception) {
                         Log.i(TAG, "BATCH error=${e.javaClass.simpleName}: ${e.message}")
+                    } finally { pending.finish() }
+                }.start()
+            }
+            P + "DEBUG_GATE_BATCH" -> {
+                // SPIKE strategy A. For each case: gate decides; clean -> local rules, suspicious -> Claude.
+                // cases carry no per-word confidence, so only the text heuristics fire here (noted in the report).
+                val ctx = context.applicationContext
+                val casesPath = intent.getStringExtra("cases") ?: return
+                val promptPath = intent.getStringExtra("prompt")
+                val pending = goAsync()
+                Thread {
+                    try {
+                        val prompt = promptPath?.let { java.io.File(it).readText().trim() } ?: CleanupClient.loadPrompt(ctx)
+                        val key = SecureKeys.get(ctx, SecureKeys.KEY_ANTHROPIC)
+                        val claude = key?.let { CleanupClient(it, prompt) }
+                        val local = LocalCleaner()
+                        val vocab = ctx.getSetting(DICTATION_VOCAB).toVocabList()
+                        claude?.warmUp()
+                        val cases = kotlinx.serialization.json.Json.parseToJsonElement(java.io.File(casesPath).readText()) as kotlinx.serialization.json.JsonArray
+                        for (c in cases) {
+                            val o = c as kotlinx.serialization.json.JsonObject
+                            fun s(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
+                            val segment = s("segment"); val boundary = s("boundary"); val context2 = s("context")
+                            val g = CleanupGate.inspect(segment, emptyList(), vocab, boundary, context2)
+                            val req = CleanupRequest(context2, boundary, segment, vocab)
+                            val engine = if (g.clean) "local" else "claude"
+                            val cleaner = if (g.clean) local else claude
+                            if (cleaner == null) { Log.i(TAG, "GATE id=${s("id")} clean=${g.clean} reason=${g.reason} engine=claude error=no_key"); continue }
+                            when (val r = cleaner.clean(req)) {
+                                is CleanupResponse.Ok -> {
+                                    val forced = boundary.isNotEmpty() && !r.join && PauseHeuristics.endsUnfinished(context2)
+                                    val shown = if (forced) PauseHeuristics.lowercaseContinuation(r.text, vocab) else r.text
+                                    Log.i(TAG, "GATE id=${s("id")} clean=${g.clean} reason=${g.reason} engine=$engine ms=${r.ms} join=${r.join || forced} out=[$shown]")
+                                }
+                                is CleanupResponse.Failed -> Log.i(TAG, "GATE id=${s("id")} clean=${g.clean} reason=${g.reason} engine=$engine failed=${r.reason}")
+                            }
+                        }
+                        Log.i(TAG, "GATE done n=${cases.size}")
+                    } catch (e: Exception) {
+                        Log.i(TAG, "GATE error=${e.javaClass.simpleName}: ${e.message}")
                     } finally { pending.finish() }
                 }.start()
             }

@@ -85,6 +85,8 @@ class DictationController(private val latinIME: LatinIME) {
     private val seenSegments = HashSet<Long>()
     /** Raw final words of the open utterance (may start with carried sentence punctuation). */
     private val pendingRaw = StringBuilder()
+    // SPIKE (cleanup-gate): per-word confidence for the words now in pendingRaw, for the shadow gate.
+    private val pendingWords = ArrayList<org.futo.inputmethod.latin.dictation.cleanup.CleanupGate.Word>()
     private var partial = ""                   // provisional tail as displayed (after spoken replacements)
     private var partialRaw = ""                // provisional tail as received
     private var composingShown = ""            // what we believe the editor's composing region holds
@@ -417,11 +419,12 @@ class DictationController(private val latinIME: LatinIME) {
                 val finalRaw = ev.text.trim()
                 partialRaw = remainderAfter(partialRaw, finalRaw)
                 partial = partialRaw.applySpokenReplacements()
+                if (ev.words.isNotEmpty()) ev.words.forEach { pendingWords.add(org.futo.inputmethod.latin.dictation.cleanup.CleanupGate.Word(it.content, it.confidence, it.isPunctuation)) }
                 if (!cleanupActive && inFlight == null) {
                     // Raw mode: commit as the words arrive (plus anything still waiting from before).
                     appendFragment(pendingRaw, finalRaw)
                     val text = pendingRaw.toString().trim()
-                    pendingRaw.clear()
+                    pendingRaw.clear(); pendingWords.clear()
                     commitText(text.applySpokenReplacements(), "seg" to ev.segmentId)
                     return
                 }
@@ -542,9 +545,14 @@ class DictationController(private val latinIME: LatinIME) {
         val body = withLead.drop(lead.length).trimStart()
         pendingRaw.clear()
         val context = committedTail.toString().takeLast(CONTEXT_CHARS)
+        // SPIKE shadow gate: log what the gate WOULD decide. Production still always calls Claude.
+        val gw = ArrayList(pendingWords)
+        pendingWords.clear()
+        val gate = org.futo.inputmethod.latin.dictation.cleanup.CleanupGate.inspect(body, gw, vocabulary, lead, context)
         val u = Utterance(++utteranceCounter, lead, body, trail, isLast, context)
         inFlight = u
         DictationLog.event("cleanup_request", "utt" to u.id, "trigger" to trigger, "lead" to lead, "raw" to body, "trail" to trail, "words" to wordCount(body))
+        DictationLog.event("gate", "utt" to u.id, "clean" to gate.clean, "reason" to gate.reason, "confWords" to gw.size)
         val client = cleanup
         val request = CleanupRequest(context = context, boundary = lead, segment = body, vocabulary = vocabulary)
         u.job = latinIME.lifecycleScope.launch(Dispatchers.Main.immediate) {
@@ -660,7 +668,7 @@ class DictationController(private val latinIME: LatinIME) {
     }
 
     private fun resetTextModel() {
-        pendingRaw.clear(); partial = ""; partialRaw = ""; composingShown = ""; strandedComposing = ""
+        pendingRaw.clear(); pendingWords.clear(); partial = ""; partialRaw = ""; composingShown = ""; strandedComposing = ""
         committedTail.clear()
     }
 

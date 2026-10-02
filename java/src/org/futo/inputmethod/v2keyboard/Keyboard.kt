@@ -132,8 +132,11 @@ val DefaultNumberRowClassic = Row(
 
 val DefaultBottomRow = Row(
     bottom = listOf(
+        TemplateDictationMicKey,
         TemplateSymbolsKey,
-        ContextualKey(fallbackKey = BaseKey(",")),
+        // Samsung layout: no comma key here (it is on the period key's long-press); the
+        // contextual key still appears in URL / e-mail / date fields.
+        ContextualKey(),
         TemplateActionKey,
         TemplateSpaceKey,
         TemplateOptionalZWNJKey,

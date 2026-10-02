@@ -416,7 +416,7 @@
     },
     "keylabel": {
         "to_alpha": "ABC",
-        "to_symbol": "?123",
+        "to_symbol": "!#1",
         "to_more_symbol": "= \\\\ <",
         "tablet_to_more_symbol": "~ [ <",
         "to_phone_numeric": "123",

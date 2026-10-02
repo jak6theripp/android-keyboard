@@ -698,7 +698,7 @@ val NumberRowSettingMenu = UserSettingsMenu(
         userSettingDecorationOnly {
             PrimarySettingToggleDataStoreItem(
                 stringResource(R.string.keyboard_settings_show_number_row),
-                useSharedPrefsBool(Settings.PREF_ENABLE_NUMBER_ROW, false)
+                useSharedPrefsBool(Settings.PREF_ENABLE_NUMBER_ROW, true)
             )
         },
 
@@ -707,11 +707,11 @@ val NumberRowSettingMenu = UserSettingsMenu(
             default = {false},
             key = Settings.PREF_USE_WESTERN_NUMERALS,
         ).copy(visibilityCheck = {
-            useSharedPrefsBool(Settings.PREF_ENABLE_NUMBER_ROW, false).value
+            useSharedPrefsBool(Settings.PREF_ENABLE_NUMBER_ROW, true).value
         }),
 
         UserSetting(name = R.string.keyboard_settings_number_row_style, visibilityCheck = {
-            useSharedPrefsBool(Settings.PREF_ENABLE_NUMBER_ROW, false).value
+            useSharedPrefsBool(Settings.PREF_ENABLE_NUMBER_ROW, true).value
         }) {
             val context = LocalContext.current
             val scheme = LocalKeyboardScheme.current
@@ -754,7 +754,7 @@ val NumberRowSettingMenu = UserSettingsMenu(
                 ),
                 setting = useSharedPrefsInt(
                     key = Settings.PREF_NUMBER_ROW_MODE,
-                    default = Settings.NUMBER_ROW_MODE_DEFAULT
+                    default = Settings.NUMBER_ROW_MODE_CLASSIC
                 ),
                 hints = listOf(
                     {

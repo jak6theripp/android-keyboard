@@ -2,6 +2,9 @@
 <!-- Streaming dictation (personal fork). Not translated. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="action_dictation_title">Dictation</string>
+    <string name="action_ai_reply_title">AI reply</string>
+    <string name="action_translate_title">Translate</string>
+    <string name="action_not_built_yet">Not built yet</string>
     <string name="dictation_notification_channel">Dictation</string>
     <string name="dictation_notification_title">Dictation mic is on</string>
     <string name="dictation_notification_text">Tap Stop to end dictation</string>

@@ -1,5 +1,7 @@
 package org.futo.inputmethod.v2keyboard
 
+import org.futo.inputmethod.latin.dictation.DICTATION_FALLBACK_MIC_KEY
+import org.futo.inputmethod.latin.uix.DataStoreHelper
 import android.view.inputmethod.EditorInfo
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -338,6 +340,39 @@ data class OptionalZWNJKey(
         return selectKey(params, keyboard)?.computeData(params, row, keyboard, coordinate)
     }
 }
+
+/**
+ * Optional mic key at the far left of the bottom row, directly above the One UI navigation-bar
+ * slot where the system voice-input button sits. Starts streaming dictation. Shown only when the
+ * "Mic key on keyboard" setting is on.
+ */
+class DictationMicKey : AbstractKey {
+    private fun enabled() = DataStoreHelper.getSetting(DICTATION_FALLBACK_MIC_KEY)
+    override fun countsToKeyCoordinate(params: KeyboardParams, row: Row, keyboard: Keyboard): Boolean = false
+    override fun computeData(params: KeyboardParams, row: Row, keyboard: Keyboard, coordinate: KeyCoordinate): ComputedKeyData? {
+        if (!enabled()) return null
+        val actionId = AllActionKeys.indexOf("dictation")
+        if (actionId < 0) return null
+        return ComputedKeyData(
+            label                 = "",
+            code                  = Constants.CODE_ACTION_0 + actionId,
+            outputText            = null,
+            width                 = KeyWidth.Regular,
+            icon                  = "action_dictation",
+            style                 = KeyVisualStyle.Functional,
+            anchored              = true,
+            showPopup             = false,
+            moreKeys              = listOf(),
+            longPressEnabled      = false,
+            repeatable            = false,
+            moreKeyFlags          = 0,
+            countsToKeyCoordinate = false,
+            hint                  = "",
+            labelFlags            = 0
+        )
+    }
+}
+val TemplateDictationMicKey = DictationMicKey()
 
 val TemplateEnterKey = EnterKey()
 val TemplateActionKey = ActionKey()

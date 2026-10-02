@@ -44,8 +44,9 @@ public final class LanguageOnSpacebarUtils {
     public static int getLanguageOnSpacebarFormatType(
             @Nonnull final Locale locale, @Nonnull final String keyboardLayout) {
         // Only this subtype is enabled and equals to the system locale.
+        // Personal fork (Samsung layout): the space bar always shows the language.
         if (sEnabledSubtypes.size() < 2 && sIsSystemLanguageSameAsInputLanguage) {
-            return FORMAT_TYPE_NONE;
+            return FORMAT_TYPE_LANGUAGE_ONLY;
         }
 
         final String keyboardLanguage = locale.getLanguage();

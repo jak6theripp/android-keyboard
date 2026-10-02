@@ -333,11 +333,9 @@ object Subtypes {
             getLocale(convertToSubtype(it))
         }.distinct()
 
-        if(activeLocales.size == 1) {
-            hideLanguageOnSpaceBarForLocale = activeLocales[0]
-        } else {
-            hideLanguageOnSpaceBarForLocale = null
-        }
+        // Personal fork (Samsung layout): keep the language on the space bar even when only one
+        // language is enabled. Upstream hid it in that case.
+        hideLanguageOnSpaceBarForLocale = null
     }
 
     @JvmStatic
@@ -359,6 +357,10 @@ object Subtypes {
         }
 
         val middleText = Locale(locale.language).getDisplayName(locale)
+        // Samsung style "English (US)" when there is room for it
+        if(locale.country.isNotEmpty() && availableWidth >= middleText.length + locale.country.length + 5) {
+            return "$middleText (${locale.country})"
+        }
         return middleText
     }
 

@@ -176,7 +176,7 @@ public class SettingsValues {
                         RegistryKt.getDefaultActionKey()
                 ));
         mShowsActionKey = mActionKeyId != -1;
-        mIsNumberRowEnabledByUser = prefs.getBoolean(Settings.PREF_ENABLE_NUMBER_ROW, false);
+        mIsNumberRowEnabledByUser = prefs.getBoolean(Settings.PREF_ENABLE_NUMBER_ROW, true);
         mIsNumberRowEnabled = mIsNumberRowEnabledByUser
                 || (inputAttributes.mIsPasswordField && !inputAttributes.mIsNumericalPasswordField)
                 || inputAttributes.mIsEmailField;
@@ -214,7 +214,7 @@ public class SettingsValues {
         // Personal fork: hold-backspace accelerates into whole-word deletion by default.
         mBackspaceModeHold = prefs.getInt(Settings.PREF_BACKSPACE_MODE_HOLD, Settings.BACKSPACE_MODE_WORDS);
         mNumberRowMode = mIsNumberRowEnabledByUser ?
-                prefs.getInt(Settings.PREF_NUMBER_ROW_MODE, Settings.NUMBER_ROW_MODE_DEFAULT)
+                prefs.getInt(Settings.PREF_NUMBER_ROW_MODE, Settings.NUMBER_ROW_MODE_CLASSIC)
                 : Settings.NUMBER_ROW_MODE_DEFAULT;
         mAltSpacesMode = inputAttributes.mIsEmailField ? Settings.SPACES_MODE_NONE : prefs.getInt(Settings.PREF_ALT_SPACES_MODE, Settings.DEFAULT_ALT_SPACES_MODE);
 

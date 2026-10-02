@@ -613,6 +613,8 @@ class UixManager(private val latinIME: LatinIME) {
     private var currentNotice: MutableState<ImportantNotice?> = mutableStateOf(null)
 
     private var inlineStuffHiddenByTyping = mutableStateOf(false)
+    // Samsung behaviour: the toolbar shows when the keyboard opens, suggestions once typing starts
+    private var typedSinceInputStart = mutableStateOf(false)
 
     private var isActionsExpanded = mutableStateOf(false)
     private fun toggleActionsExpanded() {
@@ -740,7 +742,8 @@ class UixManager(private val latinIME: LatinIME) {
                     },
                     onQuickClipDismiss = { quickClipState.value = null },
                     needToUseExpandableSuggestionUi = needToUseExpandableSuggestionUi,
-                    loading = latinIME.imeManager.isImeLoading()
+                    loading = latinIME.imeManager.isImeLoading(),
+                    preferToolbar = !typedSinceInputStart.value
                 )
             }
         }
@@ -1622,6 +1625,7 @@ class UixManager(private val latinIME: LatinIME) {
             e.printStackTrace()
         }
         inlineStuffHiddenByTyping.value = false
+        typedSinceInputStart.value = false
         this.editorInfo = editorInfo
 
         currTutorialMode.value = tutorialMode
@@ -1650,6 +1654,7 @@ class UixManager(private val latinIME: LatinIME) {
 
     // Called by InputLogic on any event
     fun onInputEvent(textBlank: Boolean) {
+        typedSinceInputStart.value = true
         inlineStuffHiddenByTyping.value = textBlank == false
     }
 

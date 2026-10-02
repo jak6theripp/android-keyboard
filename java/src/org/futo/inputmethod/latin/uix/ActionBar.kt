@@ -12,6 +12,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -602,8 +603,9 @@ fun ActionItemSmall(action: Action, onSelect: (Action) -> Unit, onLongSelect: (A
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ActionItems(onSelect: (Action) -> Unit, onLongSelect: (Action) -> Unit) {
+fun ActionItems(onSelect: (Action) -> Unit, onLongSelect: (Action) -> Unit, samsungStyle: Boolean = false) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
     val actions = if(!LocalInspectionMode.current) {
@@ -628,6 +630,30 @@ fun ActionItems(onSelect: (Action) -> Unit, onLongSelect: (Action) -> Unit) {
         actions.toActionList().toSet().toList()
     }
 
+    if(samsungStyle) {
+        // Samsung toolbar: every icon gets an equal share of the row, "…" overflow at the far right.
+        val contentCol = LocalKeyboardScheme.current.onBackground
+        Row(Modifier.safeKeyboardPadding().fillMaxWidth().fillMaxHeight()) {
+            (actionItems + MoreActionsAction).forEach { action ->
+                Box(modifier = Modifier
+                    .weight(1.0f)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .combinedClickable(
+                        onLongClick = action.altPressImpl?.let { { onLongSelect(action) } },
+                        onClick = { onSelect(action) }), contentAlignment = Center) {
+                    Icon(
+                        painter = painterResource(id = action.icon),
+                        contentDescription = stringResource(action.name),
+                        tint = contentCol,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+        }
+        return
+    }
+
     val lazyListState = rememberLazyListState(scrollItemIndex, scrollItemOffset)
 
     DisposableEffect(Unit) {
@@ -647,8 +673,12 @@ fun ActionItems(onSelect: (Action) -> Unit, onLongSelect: (Action) -> Unit) {
     } }
 
     Box(Modifier.safeKeyboardPadding()) {
-        LazyRow(state = lazyListState) {
-            item {
+        LazyRow(
+            state = lazyListState,
+            modifier = if(samsungStyle) Modifier.fillMaxWidth() else Modifier,
+            horizontalArrangement = if(samsungStyle) Arrangement.SpaceEvenly else Arrangement.Start
+        ) {
+            if(!samsungStyle) item {
                 ActionItemSmall(action = MoreActionsAction, onSelect = {
                     onSelect(MoreActionsAction)
                 }, onLongSelect = { })
@@ -656,6 +686,12 @@ fun ActionItems(onSelect: (Action) -> Unit, onLongSelect: (Action) -> Unit) {
             }
             items(actionItems.size, key = { actionItems[it].name }) {
                 ActionItem(it, actionItems[it], onSelect, onLongSelect)
+            }
+            // Samsung puts the "…" overflow at the far right
+            if(samsungStyle) item {
+                ActionItemSmall(action = MoreActionsAction, onSelect = {
+                    onSelect(MoreActionsAction)
+                }, onLongSelect = { })
             }
         }
 
@@ -825,6 +861,7 @@ fun ActionBar(
     onQuickClipDismiss: () -> Unit = {},
     needToUseExpandableSuggestionUi: Boolean = false,
     loading: Boolean = false,
+    preferToolbar: Boolean = false,
 ) {
     val view = LocalView.current
     val context = LocalContext.current
@@ -868,7 +905,20 @@ fun ActionBar(
                 .fillMaxWidth()
                 .weight(1.0f), color = actionBarColor()
         ) {
+            // Samsung behaviour: with nothing to suggest, this row is the toolbar; once there are
+            // suggestions it shows them, with the arrow at the left to bring the toolbar back.
+            val showInlineToolbar = !isActionsExpanded && !oldActionBar.value && importantNotice == null && !loading
+                    && inlineSuggestions.isEmpty() && quickClipState == null && (words == null || words.isEmpty || preferToolbar)
             Row(Modifier.safeKeyboardPadding()) {
+                if(showInlineToolbar) {
+                    Box(modifier = Modifier
+                        .weight(1.0f)
+                        .fillMaxHeight()) {
+                        ActionItems(onActionActivated, onActionAltActivated, samsungStyle = true)
+                    }
+                    return@Row
+                }
+
                 ExpandActionsButton(isActionsExpanded) {
                     toggleActionsExpanded()
 

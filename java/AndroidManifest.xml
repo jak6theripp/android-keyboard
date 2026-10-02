@@ -88,6 +88,8 @@
             <meta-data android:name="android.speech" android:resource="@xml/recognition_service"/>
         </service>
 
+        <receiver android:name=".dictation.NavBarMicReceiver" android:exported="false"/>
+
         <!-- Debug/test hooks. Callable only by the shell (adb) or the system: requires DUMP. -->
         <receiver android:name=".dictation.DictationDebugReceiver"
              android:exported="true"
@@ -96,6 +98,7 @@
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_AUDIO"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_TOGGLE"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_STOP"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_NAVBAR"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FIELD"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_CLEANUP"/>
                 <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FAKE_CLEANUP"/>

@@ -681,12 +681,22 @@ class LatinIME : InputMethodServiceCompose(), LatinIMELegacy.SuggestionStripCont
     override fun onWindowShown() {
         super.onWindowShown()
         latinIMELegacy.onWindowShown()
+        org.futo.inputmethod.latin.dictation.NavBarMic.show(this)
         updateColorsIfDynamicChanged()
+    }
+
+    // SemStatusBarManager checks this signature permission in our own process, against this service
+    // (the system side does not check). Answer it for our own navigation-bar mic call only.
+    override fun enforceCallingOrSelfPermission(permission: String, message: String?) {
+        if (permission == org.futo.inputmethod.latin.dictation.NavBarMic.PERMISSION &&
+            org.futo.inputmethod.latin.dictation.NavBarMic.calling) return
+        super.enforceCallingOrSelfPermission(permission, message)
     }
 
     override fun onWindowHidden() {
         super.onWindowHidden()
         latinIMELegacy.onWindowHidden()
+        org.futo.inputmethod.latin.dictation.NavBarMic.hide(this)
         uixManager.onInputFinishing()
     }
 

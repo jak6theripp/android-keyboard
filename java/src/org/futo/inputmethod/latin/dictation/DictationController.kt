@@ -261,6 +261,13 @@ class DictationController(private val latinIME: LatinIME) {
         if (inputViewActive) startVia("voice_subtype") else startWhenViewReady = "voice_subtype"
     }
 
+    /** The mic in the system navigation bar: same as the mic key, and it also stops a running session. */
+    fun onNavBarMicTapped() {
+        android.util.Log.i("Dictation", "navbar mic tapped viewActive=$inputViewActive engine=${engine.state.value}")
+        if (engine.isActive) { engine.stop("navbar_mic"); return }
+        if (inputViewActive) startVia("navbar_mic")
+    }
+
     private fun startVia(path: String) {
         nextTriggerPath = path
         latinIME.uixManager.triggerActionInternalFromIme(AllActions.indexOf(DictationAction), false)
@@ -270,6 +277,10 @@ class DictationController(private val latinIME: LatinIME) {
     fun debugToggle() {
         latinIME.uixManager.triggerActionInternalFromIme(AllActions.indexOf(DictationAction), false)
     }
+
+    /** Debug: re-request the navigation-bar mic with different placement parameters. */
+    fun debugNavBar(requestClass: String?, position: Int, priority: Int) =
+        NavBarMic.debugReconfigure(latinIME, requestClass, position, priority)
 
     /** Debug: what the editor holds before the cursor. */
     fun debugTextBeforeCursor(n: Int): String? = latinIME.currentInputConnection?.getTextBeforeCursor(n, 0)?.toString()

@@ -90,4 +90,7 @@
     <string name="dictation_settings_vocab_subtitle">One term per line. Sent to the recognizer as custom vocabulary and to the cleanup pass.</string>
     <string name="dictation_settings_stt_url">Speechmatics endpoint</string>
     <string name="dictation_settings_last_path">Last voice-input path triggered: %1$s</string>
+    <string name="dictation_navbar_mic_description">Voice dictation</string>
+    <string name="dictation_settings_navbar_mic">Mic in the navigation bar</string>
+    <string name="dictation_settings_navbar_mic_subtitle">Shows a mic in the bottom-left of the navigation bar while the keyboard is open. Samsung One UI only, and only when Settings → General management → Keyboard → “Show input method button on navigation bar” is off</string>
 </resources>

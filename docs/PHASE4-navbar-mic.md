@@ -61,3 +61,35 @@ Every start writes `<path> at <time>` to the setting shown in Settings → Dicta
 If One UI will route the Samsung-Keyboard nav-bar mic to a third-party voice IME, there is a hybrid setup: keep **Samsung Keyboard**
 for typing (zero relearning) and use this app only as the voice input behind the nav-bar mic. Path 2 already supports that: when
 another keyboard hands over, dictation runs and control returns to that keyboard. Whether One UI allows it is the open question above.
+
+## Update - 2026-10-02: the mic is in the navigation bar
+
+**Result:** with this keyboard open, a mic is drawn in the navigation bar's bottom-left slot. Tap starts dictation, tap again stops
+it, and it is removed when the keyboard closes. Trigger is logged as `navbar_mic`.
+
+**How** (`latin/dictation/NavBarMic.kt`): One UI has a Samsung-only call, `SemStatusBarManager.setNavigationBarShortcut(requestClass,
+RemoteViews, position, priority)`, which Samsung Keyboard uses for its own mic. Read from the phone's own framework and SystemUI:
+the system service forwards the call to SystemUI without checking the caller; the only check is in the client-side wrapper, which
+asks the calling app's own Context for the signature permission `STATUS_BAR_SERVICE`. `LatinIME.enforceCallingOrSelfPermission`
+answers that check for this one call (flag `NavBarMic.calling`), nothing else. The tap comes back as a PendingIntent to the
+non-exported `NavBarMicReceiver`.
+
+**Requirement (the user's own setting):** Settings -> General management -> Keyboard -> "Show input method button on navigation
+bar" must be **off**. While it is on, the keyboard-switcher icon occupies the slot and SystemUI stores the request without drawing
+it. The user turned it off on 2026-10-02. Side effect: no keyboard-switcher icon in the navigation bar.
+
+**What did not matter:** the request name. Tried with the switcher button on, none drew: own class name (left, right), a name
+containing "honeyboard", own package at priority 12 (left, right), and once Samsung Keyboard's exact request
+(`com.samsung.android.honeyboard`, left, priority 12; removed immediately, it collides with Samsung Keyboard's own entry and must
+not be shipped). The shipped request uses this app's own class name, position 0, priority 5.
+
+**Caveats:** undocumented and intended by Samsung for its own apps; a One UI update can close it without notice, in which case the
+button simply does not appear and the bottom-row mic key is the fallback. Toggle: Settings -> Dictation -> "Mic in the navigation
+bar". Debug hook (adb only): `DEBUG_NAVBAR --es class .. --ei position .. --ei priority ..`.
+
+### Verification status
+- Builds/compiles: yes.
+- Installed and verified on the device (cover screen, portrait, Chrome): mic drawn bottom-left; tap starts a session
+  (`dictation start trigger=navbar_mic`); tap while listening stops it (`stop_requested reason=navbar_mic`); the mic stays visible
+  under the dictation panel; removed when the keyboard closes. Tested with injected audio.
+- Not yet verified: inner screen, landscape, dark/light tinting on light apps, behaviour after a reboot, real-voice use.

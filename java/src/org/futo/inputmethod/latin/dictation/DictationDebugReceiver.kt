@@ -73,6 +73,11 @@ class DictationDebugReceiver : BroadcastReceiver() {
                 NetworkStatus.debugForceOffline = intent.getBooleanExtra("on", false)
                 Log.i(TAG, "OFFLINE forced=${NetworkStatus.debugForceOffline} online=${NetworkStatus.isOnline(context)}")
             }
+            P + "DEBUG_NAVBAR" -> {
+                val c = DictationController.instance
+                c?.debugNavBar(intent.getStringExtra("class"), intent.getIntExtra("position", 0), intent.getIntExtra("priority", 5))
+                Log.i(TAG, "NAVBAR controller=${c != null} class=${NavBarMic.requestClass} position=${NavBarMic.position} priority=${NavBarMic.priority}")
+            }
             P + "DEBUG_STOP" -> { DictationEngine.stop("debug"); Log.i(TAG, "STOP") }
             P + "DEBUG_FIELD" -> {
                 val text = DictationController.instance?.debugTextBeforeCursor(6000)

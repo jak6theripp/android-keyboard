@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inflated by SystemUI inside the One UI navigation bar; the root must be an ImageView so it is tinted with the bar. -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dictation_navbar_mic"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:scaleType="center"
+    android:src="@drawable/dictation_navbar_mic"
+    android:contentDescription="@string/dictation_navbar_mic_description" />

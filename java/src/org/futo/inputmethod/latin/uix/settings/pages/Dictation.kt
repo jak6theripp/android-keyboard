@@ -23,6 +23,7 @@ import org.futo.inputmethod.latin.dictation.DICTATION_CLEANUP_ENABLED
 import org.futo.inputmethod.latin.dictation.DICTATION_DEBUG_LOGGING
 import org.futo.inputmethod.latin.dictation.DICTATION_EOU_SILENCE_S
 import org.futo.inputmethod.latin.dictation.DICTATION_FALLBACK_MIC_KEY
+import org.futo.inputmethod.latin.dictation.DICTATION_NAVBAR_MIC
 import org.futo.inputmethod.latin.dictation.DICTATION_HOLD_TO_TALK
 import org.futo.inputmethod.latin.dictation.DICTATION_IDLE_TIMEOUT_S
 import org.futo.inputmethod.latin.dictation.DICTATION_LAST_TRIGGER_PATH
@@ -173,6 +174,11 @@ val DictationMenu = UserSettingsMenu(
             title = R.string.dictation_settings_hold_to_talk,
             subtitle = R.string.dictation_settings_hold_to_talk_subtitle,
             setting = DICTATION_HOLD_TO_TALK
+        ),
+        userSettingToggleDataStore(
+            title = R.string.dictation_settings_navbar_mic,
+            subtitle = R.string.dictation_settings_navbar_mic_subtitle,
+            setting = DICTATION_NAVBAR_MIC
         ),
         userSettingToggleDataStore(
             title = R.string.dictation_settings_fallback_mic_key,

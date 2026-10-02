@@ -32,9 +32,16 @@ def main():
     engine = "claude"
     if "--engine" in argv:
         i = argv.index("--engine"); engine = argv[i + 1]; del argv[i:i + 2]
+    if "--from" in argv:      # start at this case id (to finish a run that hit the on-device quota)
+        i = argv.index("--from"); first = argv[i + 1]; del argv[i:i + 2]
+        ids = [c["id"] for c in cases]
+        cases = cases[ids.index(first):]
     prompt = argv[0] if argv else os.path.join(HERE, "..", "..", "java", "assets", "dictation", "cleanup_prompt.txt")
     adb("shell", "mkdir", "-p", REMOTE)
-    adb("push", os.path.join(HERE, "cases.json"), REMOTE + "/eval-cases.json")
+    tmp = os.path.join(HERE, "_cases_run.json")
+    json.dump(cases, io.open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+    adb("push", tmp, REMOTE + "/eval-cases.json")
+    os.remove(tmp)
     extra = ["--es", "cases", REMOTE + "/eval-cases.json"]
     if prompt:
         adb("push", prompt, REMOTE + "/eval-prompt.txt")
@@ -45,7 +52,7 @@ def main():
     adb("shell", "am", "broadcast", "-n", PKG + "/.dictation.DictationDebugReceiver",
         "-a", PKG + ".dictation.DEBUG_CLEANUP_BATCH", *extra)
     out = ""
-    for _ in range(90 if engine == "claude" else 600):
+    for _ in range(90 if engine == "claude" else 1500):
         time.sleep(1)
         out = adb("logcat", "-d", "-v", "raw", "-s", "DictationDebug:V").stdout
         if "BATCH done" in out or "BATCH error" in out:
@@ -55,7 +62,7 @@ def main():
         m = re.match(r"BATCH id=(\S+) ms=(\d+) verdict=(\S+) edits=(\S+) (?:forced=\S+ )?join=(\S+) out=\[(.*)\]$", line)
         if m:
             results[m.group(1)] = dict(ms=int(m.group(2)), verdict=m.group(3), edits=m.group(4), join=(m.group(5) == "true"), out=m.group(6))
-        elif "failed=" in line or "BATCH error" in line or "BATCH engine=" in line or "BATCH warmup=" in line:
+        elif "failed=" in line or "BATCH error" in line or "BATCH engine=" in line or "BATCH warmup=" in line or "quota_wait" in line:
             print(line)
     passed = 0
     lat = []

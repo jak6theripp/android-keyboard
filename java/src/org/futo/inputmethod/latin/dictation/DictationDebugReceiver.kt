@@ -142,7 +142,16 @@ class DictationDebugReceiver : BroadcastReceiver() {
                             val o = c as kotlinx.serialization.json.JsonObject
                             fun s(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
                             val segment = s("segment")
-                            when (val r = client.clean(CleanupRequest(s("context"), s("boundary"), segment, vocab))) {
+                            var r0 = client.clean(CleanupRequest(s("context"), s("boundary"), segment, vocab))
+                            // SPIKE: AICore answers BUSY when the per-app short-term quota is used up; wait and retry.
+                            var waits = 0
+                            while (nano && r0 is CleanupResponse.Failed && r0.reason.startsWith("BUSY") && waits < 8) {
+                                waits++
+                                Log.i(TAG, "BATCH quota_wait id=${s("id")} n=$waits")
+                                Thread.sleep(30_000)
+                                r0 = client.clean(CleanupRequest(s("context"), s("boundary"), segment, vocab))
+                            }
+                            when (val r = r0) {
                                 is CleanupResponse.Ok -> {
                                     val v = CleanupGuard.check(segment, r.text)
                                     val forced = s("boundary").isNotEmpty() && !r.join && PauseHeuristics.endsUnfinished(s("context"))

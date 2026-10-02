@@ -64,6 +64,21 @@
              android:foregroundServiceType="microphone"
              android:exported="false"/>
 
+        <!-- Debug/test hooks. Callable only by the shell (adb) or the system: requires DUMP. -->
+        <receiver android:name=".dictation.DictationDebugReceiver"
+             android:exported="true"
+             android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_AUDIO"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_TOGGLE"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_STOP"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FIELD"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_CLEANUP"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_FAKE_CLEANUP"/>
+                <action android:name="org.futo.inputmethod.latin.dictation.DEBUG_CLEANUP_BATCH"/>
+            </intent-filter>
+        </receiver>
+
         <!--
         <service android:name=".spellcheck.AndroidSpellCheckerService"
              android:label="@string/spell_checker_service_name"

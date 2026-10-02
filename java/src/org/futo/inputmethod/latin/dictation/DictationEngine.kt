@@ -88,6 +88,18 @@ object DictationEngine {
     private val audioSignal = Channel<Unit>(Channel.CONFLATED)
     private var senderJob: Job? = null
     private var endOfTranscriptSignal = Channel<Unit>(Channel.CONFLATED)
+
+    // Utterance detection (the recognizer's own end-of-utterance is off: it forces periods at pauses)
+    private const val UTTERANCE_QUIET_MS = 700L
+    private var lastTranscriptWallMs = 0L
+    private var lastPartialBlank = true
+    private var lastEouSegment = 0L
+    private var quietJob: Job? = null
+
+    /** Debug: feed this raw 16 kHz mono PCM16 file instead of the microphone for the next session. */
+    @Volatile var debugAudioPath: String? = null
+    @Volatile private var injecting = false
+    private var injectThread: Thread? = null
     @Volatile private var reopenSuppressed = false
 
     /** Set by the controller before it re-opens the status window after a view recreation. */
@@ -158,11 +170,20 @@ object DictationEngine {
             lastFinalAbsOffset = sessionBaseOffset
             lastSpeechActivityMs = SystemClock.elapsedRealtime()
             lastSpeechAudioOffset = sessionBaseOffset
-            val cap = AudioCapture(ctx, captureListener)
-            if (!cap.start(requestFocus = true)) { finishStop("capture_failed"); return@launch }
-            capture = cap
-            DictationLog.event("capture_started")
+            lastTranscriptWallMs = SystemClock.elapsedRealtime(); lastPartialBlank = true; lastEouSegment = 0
+            val inject = debugAudioPath
+            debugAudioPath = null
+            if (inject != null) {
+                startInjection(inject)
+                DictationLog.event("capture_started", "injected" to inject)
+            } else {
+                val cap = AudioCapture(ctx, captureListener)
+                if (!cap.start(requestFocus = true)) { finishStop("capture_failed"); return@launch }
+                capture = cap
+                DictationLog.event("capture_started")
+            }
             startIdleTimer()
+            startQuietDetector()
             startSender()
             connect()
         }
@@ -205,7 +226,9 @@ object DictationEngine {
         senderJob?.cancel(); senderJob = null
         provider?.close(); provider = null
         capture?.stop(); capture = null
+        injecting = false
         idleJob?.cancel(); idleJob = null
+        quietJob?.cancel(); quietJob = null
         reconnectJob?.cancel(); reconnectJob = null
         appContext?.let { try { it.startService(Intent(it, DictationService::class.java).setAction(DictationService.ACTION_STOP)) } catch (_: Exception) {} }
         val sid = sessionId
@@ -311,6 +334,9 @@ object DictationEngine {
             }
             is SttEvent.Partial -> {
                 if (ev.text.isNotBlank()) noteSpeech(ev.endTime)
+                // A lone punctuation mark waiting to be finalized does not count as speech in progress.
+                lastPartialBlank = ev.text.none { it.isLetterOrDigit() }
+                if (!lastPartialBlank) lastTranscriptWallMs = SystemClock.elapsedRealtime()
                 DictationLog.event("partial", "seg" to (segmentCounter + 1), "text" to ev.text, "t0" to ev.startTime, "t1" to ev.endTime)
                 _events.emit(DictationEvent.Partial(sessionId, segmentCounter + 1, ev.text, timeToAbsMs(ev.startTime), timeToAbsMs(ev.endTime)))
             }
@@ -318,6 +344,7 @@ object DictationEngine {
                 lastFinalAbsOffset = maxOf(lastFinalAbsOffset, timeToAbsOffset(ev.endTime))
                 if (ev.text.isBlank()) { DictationLog.event("final_empty", "t1" to ev.endTime); return }
                 noteSpeech(ev.endTime)
+                lastTranscriptWallMs = SystemClock.elapsedRealtime()
                 val id = ++segmentCounter
                 // Speech end → now latency: how far behind real time the final arrived.
                 val speechEndMs = (ring.totalWritten - timeToAbsOffset(ev.endTime)) * 1000 / AudioCapture.BYTES_PER_SECOND
@@ -325,7 +352,8 @@ object DictationEngine {
                 _events.emit(DictationEvent.Final(sessionId, id, ev.text, speechEndMs, timeToAbsMs(ev.startTime), timeToAbsMs(ev.endTime)))
             }
             is SttEvent.EndOfUtterance -> {
-                DictationLog.event("end_of_utterance", "lastSeg" to segmentCounter, "t1" to ev.endTime)
+                DictationLog.event("end_of_utterance", "lastSeg" to segmentCounter, "t1" to ev.endTime, "source" to "recognizer")
+                lastEouSegment = segmentCounter
                 _events.emit(DictationEvent.EndOfUtterance(sessionId, segmentCounter))
             }
             is SttEvent.Warning -> DictationLog.event("warning", "type" to ev.type, "reason" to ev.reason)
@@ -362,6 +390,54 @@ object DictationEngine {
             if (stopRequested || _state.value == DictationState.Idle) return@launch
             connect()
         }
+    }
+
+    // ---- utterance detection ----
+    /**
+     * Emits EndOfUtterance once the recognizer has gone quiet: at least one new final, nothing
+     * provisional outstanding, and no transcript activity for [UTTERANCE_QUIET_MS].
+     */
+    private fun startQuietDetector() {
+        quietJob?.cancel()
+        quietJob = scope.launch {
+            while (true) {
+                delay(150)
+                if (segmentCounter > lastEouSegment && lastPartialBlank &&
+                    SystemClock.elapsedRealtime() - lastTranscriptWallMs >= UTTERANCE_QUIET_MS) {
+                    lastEouSegment = segmentCounter
+                    DictationLog.event("end_of_utterance", "lastSeg" to segmentCounter, "source" to "quiet")
+                    _events.emit(DictationEvent.EndOfUtterance(sessionId, segmentCounter))
+                }
+            }
+        }
+    }
+
+    // ---- debug audio injection ----
+    /** Plays a raw PCM file into the pipeline in real time, then silence, exactly like a microphone. */
+    private fun startInjection(path: String) {
+        injecting = true
+        injectThread = Thread({
+            try {
+                java.io.File(path).inputStream().buffered().use { input ->
+                    val chunk = ByteArray(640) // 20 ms
+                    var next = System.nanoTime()
+                    var eof = false
+                    while (injecting) {
+                        var len = if (eof) -1 else input.read(chunk)
+                        if (len <= 0) {
+                            if (!eof) { eof = true; DictationLog.event("inject_eof") }
+                            java.util.Arrays.fill(chunk, 0); len = chunk.size
+                        }
+                        captureListener.onAudio(chunk, len)
+                        next += 20_000_000L * len / chunk.size
+                        val sleepMs = (next - System.nanoTime()) / 1_000_000
+                        if (sleepMs > 0) Thread.sleep(sleepMs)
+                    }
+                }
+            } catch (e: Exception) {
+                captureListener.onError("inject: ${e.javaClass.simpleName}: ${e.message}")
+            }
+        }, "DictationInject").also { it.start() }
     }
 
     // ---- idle timeout ----

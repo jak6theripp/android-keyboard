@@ -375,6 +375,10 @@ android {
         jniLibs {
             useLegacyPackaging true
         }
+        resources {
+            // Duplicate metadata files across the Anthropic SDK's transitive jars
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE*', 'META-INF/NOTICE*', 'META-INF/AL2.0', 'META-INF/LGPL2.1', 'META-INF/INDEX.LIST', 'META-INF/*.kotlin_module', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
     }
 
     ndkVersion '28.2.13676358'
@@ -433,6 +437,8 @@ dependencies {
 
     // Streaming dictation WebSocket client (personal fork)
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    // Dictation cleanup pass: official Anthropic SDK (Kotlin uses the Java SDK)
+    implementation 'com.anthropic:anthropic-java-client-okhttp:2.68.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.7.1'
 

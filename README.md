@@ -1,5 +1,10 @@
 # FUTO Keyboard
 
+> **MODIFIED COPY.** This is a personal fork of FUTO Keyboard, modified to add cloud streaming
+> dictation (Speechmatics), an LLM cleanup pass, and Samsung-style layout changes. It is for
+> personal, non-commercial use only and is not distributed. It is not an official FUTO build and
+> FUTO does not support it. See `docs/` for the modification log. Original project: https://keyboard.futo.tech/
+
 The goal is to make a good modern keyboard that stays offline and doesn't spy on you. This keyboard is a fork of [LatinIME, The Android Open-Source Keyboard](https://android.googlesource.com/platform/packages/inputmethods/LatinIME), with significant changes made to it.
 
 Check out the [FUTO Keyboard website](https://keyboard.futo.tech/) for downloads and more information.

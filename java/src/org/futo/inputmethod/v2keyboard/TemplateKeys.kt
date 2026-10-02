@@ -343,11 +343,12 @@ data class OptionalZWNJKey(
 
 /**
  * Optional mic key at the far left of the bottom row, directly above the One UI navigation-bar
- * slot where the system voice-input button sits. Starts streaming dictation. Shown only when the
- * "Mic key on keyboard" setting is on.
+ * slot where the navigation-bar mic sits. Starts streaming dictation. Shown only when the
+ * "Mic key on keyboard" setting is on, or when the navigation-bar mic could not be placed.
  */
 class DictationMicKey : AbstractKey {
-    private fun enabled() = DataStoreHelper.getSetting(DICTATION_FALLBACK_MIC_KEY)
+    private fun enabled() = DataStoreHelper.getSetting(DICTATION_FALLBACK_MIC_KEY) ||
+        org.futo.inputmethod.latin.dictation.NavBarMic.unavailable
     override fun countsToKeyCoordinate(params: KeyboardParams, row: Row, keyboard: Keyboard): Boolean = false
     override fun computeData(params: KeyboardParams, row: Row, keyboard: Keyboard, coordinate: KeyCoordinate): ComputedKeyData? {
         if (!enabled()) return null

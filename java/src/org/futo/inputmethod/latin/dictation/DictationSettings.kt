@@ -25,8 +25,8 @@ val DICTATION_PUNCT_SENSITIVITY = SettingsKey(floatPreferencesKey("dictation_pun
 
 val DICTATION_CLEANUP_ENABLED = SettingsKey(booleanPreferencesKey("dictation_cleanup_enabled"), true)
 val DICTATION_HOLD_TO_TALK = SettingsKey(booleanPreferencesKey("dictation_hold_to_talk"), false)
-/** On by default until the navigation-bar mic is confirmed to reach this keyboard (Phase 4). */
-val DICTATION_FALLBACK_MIC_KEY = SettingsKey(booleanPreferencesKey("dictation_fallback_mic_key"), true)
+/** Off by default: the mic lives in the navigation bar (NavBarMic). Shown anyway if that mic cannot be placed. */
+val DICTATION_FALLBACK_MIC_KEY = SettingsKey(booleanPreferencesKey("dictation_fallback_mic_key"), false)
 /** Mic in the One UI navigation bar while the keyboard is showing (Samsung only; see NavBarMic). */
 val DICTATION_NAVBAR_MIC = SettingsKey(booleanPreferencesKey("dictation_navbar_mic"), true)
 /** Target language for the Translate action (a language name; the last choice is remembered). */

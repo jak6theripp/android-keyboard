@@ -69,6 +69,8 @@ class AudioCapture(private val context: Context, private val listener: Listener)
         return true
     }
 
+    private val LEVEL_INTERVAL_NS = 45_000_000L
+
     private fun loop(rec: AudioRecord) {
         val samples = ShortArray(CHUNK_SAMPLES)
         val bytes = ByteArray(CHUNK_SAMPLES * 2)
@@ -87,7 +89,8 @@ class AudioCapture(private val context: Context, private val listener: Listener)
             }
             listener.onAudio(bytes, n * 2)
             val now = System.nanoTime()
-            if (now - lastLevel > 250_000_000L && accN > 0) {
+            // ~20 levels a second: the dictation panel pulses with the voice, so it has to follow syllables.
+            if (now - lastLevel > LEVEL_INTERVAL_NS && accN > 0) {
                 listener.onLevel((sqrt(acc / accN) / 32768.0).toFloat())
                 acc = 0.0; accN = 0; lastLevel = now
             }

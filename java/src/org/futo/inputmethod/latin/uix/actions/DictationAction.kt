@@ -1,7 +1,9 @@
 package org.futo.inputmethod.latin.uix.actions
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -30,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
+import kotlin.math.pow
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +53,7 @@ import org.futo.inputmethod.latin.uix.ActionWindow
 import org.futo.inputmethod.latin.uix.CloseResult
 import org.futo.inputmethod.latin.uix.KeyboardManagerForAction
 
-private val HotRed = Color(0xFFD32F2F)
+private val ListenBlue = Color(0xFF2F7DE1)
 private val WarnAmber = Color(0xFFFFA000)
 private val WaitGrey = Color(0xFF757575)
 
@@ -84,12 +87,20 @@ private class DictationWindow(val manager: KeyboardManagerForAction, val control
 
         val pulse = rememberInfiniteTransition(label = "pulse")
         val blink by pulse.animateFloat(0.45f, 1f, infiniteRepeatable(tween(450), RepeatMode.Reverse), label = "blink")
-        // Voice-reactive size: speech RMS is roughly 0.02..0.15.
-        val voiceScale by animateFloatAsState(1f + (level * 3.5f).coerceIn(0f, 0.28f), tween(120), label = "voice")
+        // Voice-reactive size. Speech RMS is roughly 0.02..0.15; the curve lifts quiet speech so it still moves.
+        val loudness = ((level - 0.01f) / 0.12f).coerceIn(0f, 1f).pow(0.6f)
+        // The circle shrinks in silence and swells with the voice, with a little bounce.
+        val core by animateFloatAsState(0.78f + loudness * 0.36f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "core")
+        // Two soft rings: one follows the voice closely, one lags behind like a ripple.
+        val ring by animateFloatAsState(loudness, spring(dampingRatio = 0.7f, stiffness = 380f), label = "ring")
+        val ripple by animateFloatAsState(loudness, spring(dampingRatio = 0.9f, stiffness = 90f), label = "ripple")
+        // Slow breathing so it is alive, but calm, while nobody is talking.
+        val breathe by pulse.animateFloat(0f, 1f, infiniteRepeatable(tween(1700, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breathe")
+        val live = hot && !warning
         val circleColor by animateColorAsState(
             when {
                 warning -> WarnAmber
-                hot -> HotRed
+                hot -> ListenBlue
                 waiting -> WaitGrey
                 state == DictationState.Paused -> WaitGrey
                 else -> MaterialTheme.colorScheme.primaryContainer
@@ -103,25 +114,34 @@ private class DictationWindow(val manager: KeyboardManagerForAction, val control
                 if (DictationEngine.isActive) controller.stop("panel_tap") else manager.closeActionWindow()
             }
         ) {
-            val diameter = min(maxHeight * 0.62f, min(maxWidth * 0.5f, 220.dp))
+            // Sized so the fully swollen circle (1.14x) and its outer ring (1.45x) stay inside the panel.
+            val diameter = min(maxHeight * 0.52f, min(maxWidth * 0.44f, 200.dp))
             Column(
                 Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Box(
-                    Modifier.size(diameter)
-                        .scale(if (hot && !warning) voiceScale else 1f)
-                        .background(circleColor.copy(alpha = if (warning || waiting) blink else 1f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (warning) {
-                        Text("$secondsLeft", color = Color.White, fontSize = (diameter.value * 0.5f).sp, fontWeight = FontWeight.Bold)
-                    } else {
-                        Icon(painterResource(R.drawable.mic_fill), contentDescription = null, tint = Color.White, modifier = Modifier.size(diameter * 0.45f))
+                Box(Modifier.padding(vertical = diameter * 0.10f).size(diameter), contentAlignment = Alignment.Center) {
+                    if (live) {
+                        Box(Modifier.fillMaxSize().scale(core + 0.06f + ripple * 0.22f + breathe * 0.03f)
+                            .background(circleColor.copy(alpha = 0.18f), CircleShape))
+                        Box(Modifier.fillMaxSize().scale(core + 0.04f + ring * 0.12f)
+                            .background(circleColor.copy(alpha = 0.34f), CircleShape))
+                    }
+                    Box(
+                        Modifier.fillMaxSize()
+                            .scale(if (live) core + breathe * 0.03f else 1f)
+                            .background(circleColor.copy(alpha = if (warning || waiting) blink else 1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (warning) {
+                            Text("$secondsLeft", color = Color.White, fontSize = (diameter.value * 0.5f).sp, fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(painterResource(R.drawable.mic_fill), contentDescription = null, tint = Color.White, modifier = Modifier.size(diameter * 0.45f))
+                        }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 val label = when {
                     error != null && state == DictationState.Idle -> error!!
                     warning -> stringResource(R.string.dictation_idle_warning, secondsLeft)

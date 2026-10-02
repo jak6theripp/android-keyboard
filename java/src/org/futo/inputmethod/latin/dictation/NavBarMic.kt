@@ -39,6 +39,10 @@ object NavBarMic {
 
     private var shown = false
 
+    /** The navigation bar refused or does not have this feature: the bottom-row mic key takes over. */
+    @Volatile var unavailable = false
+        private set
+
     fun show(service: Context) {
         if (!service.getSetting(DICTATION_NAVBAR_MIC)) { hide(service); return }
         val tap = PendingIntent.getBroadcast(service, 0,
@@ -65,7 +69,8 @@ object NavBarMic {
 
     private fun set(service: Context, views: RemoteViews?): Boolean {
         return try {
-            val manager = service.getSystemService(SERVICE) ?: return false   // not a Samsung device
+            val manager = service.getSystemService(SERVICE)
+            if (manager == null) { unavailable = true; return false }         // not a Samsung device
             val method = manager.javaClass.getMethod("setNavigationBarShortcut",
                 String::class.java, RemoteViews::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
             calling = true
@@ -75,6 +80,7 @@ object NavBarMic {
         } catch (t: Throwable) {
             val cause = (t as? java.lang.reflect.InvocationTargetException)?.targetException ?: t
             Log.w(TAG, "setNavigationBarShortcut failed: ${cause.javaClass.simpleName}: ${cause.message}")
+            unavailable = true
             false
         } finally {
             calling = false

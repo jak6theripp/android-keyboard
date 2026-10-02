@@ -274,7 +274,7 @@ object DictationEngine {
             _events.tryEmit(DictationEvent.Level(rms))
             // Every ~2 s record the peak level: proves the FGS mic is delivering real audio.
             levelMax = maxOf(levelMax, rms)
-            if (++levelN % 8 == 0) { DictationLog.event("mic_level", "peakRms" to levelMax); levelMax = 0f }
+            if (++levelN % 40 == 0) { DictationLog.event("mic_level", "peakRms" to levelMax); levelMax = 0f }
         }
         override fun onFocusChange(focusChange: Int) {
             scope.launch {
@@ -445,6 +445,7 @@ object DictationEngine {
                     val chunk = ByteArray(640) // 20 ms
                     var next = System.nanoTime()
                     var eof = false
+                    var acc = 0.0; var accN = 0; var chunks = 0
                     while (injecting) {
                         var len = if (eof) -1 else input.read(chunk)
                         if (len <= 0) {
@@ -452,6 +453,16 @@ object DictationEngine {
                             java.util.Arrays.fill(chunk, 0); len = chunk.size
                         }
                         captureListener.onAudio(chunk, len)
+                        // Same level reports as the microphone path, so the panel reacts in tests too.
+                        var i = 0
+                        while (i + 1 < len) {
+                            val v = (chunk[i].toInt() and 0xff) or (chunk[i + 1].toInt() shl 8)
+                            acc += v.toDouble() * v; accN++; i += 2
+                        }
+                        if (++chunks % 2 == 0 && accN > 0) {
+                            captureListener.onLevel((Math.sqrt(acc / accN) / 32768.0).toFloat())
+                            acc = 0.0; accN = 0
+                        }
                         next += 20_000_000L * len / chunk.size
                         val sleepMs = (next - System.nanoTime()) / 1_000_000
                         if (sleepMs > 0) Thread.sleep(sleepMs)

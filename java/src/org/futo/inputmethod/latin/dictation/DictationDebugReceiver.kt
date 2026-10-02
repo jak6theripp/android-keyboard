@@ -8,6 +8,7 @@ import org.futo.inputmethod.latin.dictation.cleanup.CleanupClient
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupGuard
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupRequest
 import org.futo.inputmethod.latin.dictation.cleanup.CleanupResponse
+import org.futo.inputmethod.latin.dictation.cleanup.PauseHeuristics
 import org.futo.inputmethod.latin.uix.getSetting
 
 /**
@@ -99,7 +100,9 @@ class DictationDebugReceiver : BroadcastReceiver() {
                             when (val r = client.clean(CleanupRequest(s("context"), s("boundary"), segment, vocab))) {
                                 is CleanupResponse.Ok -> {
                                     val v = CleanupGuard.check(segment, r.text)
-                                    Log.i(TAG, "BATCH id=${s("id")} ms=${r.ms} verdict=${if (v.accepted) "accept" else "reject"}:${v.reason} edits=${"%.2f".format(v.edits)}/${v.allowed} join=${r.join} out=[${r.text}]")
+                                    val forced = s("boundary").isNotEmpty() && !r.join && PauseHeuristics.endsUnfinished(s("context"))
+                                    val shown = if (forced) PauseHeuristics.lowercaseContinuation(r.text, vocab) else r.text
+                                    Log.i(TAG, "BATCH id=${s("id")} ms=${r.ms} verdict=${if (v.accepted) "accept" else "reject"}:${v.reason} edits=${"%.2f".format(v.edits)}/${v.allowed} forced=$forced join=${r.join || forced} out=[$shown]")
                                 }
                                 is CleanupResponse.Failed -> Log.i(TAG, "BATCH id=${s("id")} ms=${r.ms} failed=${r.reason}")
                             }

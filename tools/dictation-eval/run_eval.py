@@ -1,5 +1,9 @@
 """Runs the cleanup-pass eval set on the phone through the keyboard's debug receiver.
 
+The keyboard must be showing in a text field: Android blocks the app's network while it is in the
+background (every case then fails with 'network' in 1-2 ms). The reported join/out is what the app would
+type, i.e. after the PauseHeuristics JOIN override.
+
 Usage:  python run_eval.py [prompt.txt]      (ADB and ADB_SERIAL env vars are honoured)
         Without an argument the working copy of java/assets/dictation/cleanup_prompt.txt is used,
         so a prompt change can be evaluated without rebuilding the app.
@@ -41,7 +45,7 @@ def main():
             break
     results = {}
     for line in out.splitlines():
-        m = re.match(r"BATCH id=(\S+) ms=(\d+) verdict=(\S+) edits=(\S+) join=(\S+) out=\[(.*)\]$", line)
+        m = re.match(r"BATCH id=(\S+) ms=(\d+) verdict=(\S+) edits=(\S+) (?:forced=\S+ )?join=(\S+) out=\[(.*)\]$", line)
         if m:
             results[m.group(1)] = dict(ms=int(m.group(2)), verdict=m.group(3), edits=m.group(4), join=(m.group(5) == "true"), out=m.group(6))
         elif "failed=" in line or "BATCH error" in line:

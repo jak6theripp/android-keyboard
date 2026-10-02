@@ -11,6 +11,8 @@
   {"id": "p10", "context": "But as before, it cut off the", "boundary": ".", "segment": "Voice to text while in the middle of talking", "join": true, "expect": ["voice to text while in the middle of talking"]},
   {"id": "p11", "context": "That nice big flashing microphone emblem being replaced with tiny script", "boundary": "", "segment": "and an equally tiny stop button is. Not going to work for me", "join": true, "expect": ["and an equally tiny stop button is not going to work for me"]},
   {"id": "p12", "context": "I just have to physically tap the text box again to bring the keyboard back up. But it seems to actually queue up what I said and put it in", "boundary": ".", "segment": "Once the text box is back open", "join": true, "expect": ["once the text box is back open"]},
+  {"id": "p13", "context": "And you stopped in the middle of building for some reason. Other than that", "boundary": ".", "segment": "Things are looking a little bit better. Periods are looking a little bit better", "join": true, "expect": ["things are looking a little bit better. Periods are looking a little bit better"]},
+  {"id": "p14", "context": "The deck spindle is shot. In that case", "boundary": ".", "segment": "We should just replace the whole deck", "join": true, "expect": ["we should just replace the whole deck"]},
 
   {"id": "k01", "context": "So that is not a test that I can do", "boundary": ".", "segment": "It looks to me like the", "join": false, "expect": ["It looks to me like the"]},
   {"id": "k02", "context": "The mower is finally running", "boundary": ".", "segment": "I'll bring it by tomorrow", "join": false, "expect": ["I'll bring it by tomorrow"]},
@@ -19,6 +21,8 @@
   {"id": "k05", "context": "Backspace works on the panel while I'm talking", "boundary": ".", "segment": "Something that I don't like", "join": false, "expect": ["Something that I don't like"]},
   {"id": "k06", "context": "So I'm gonna need to fix that", "boundary": ".", "segment": "Also, it's still putting periods in weird places if I pause", "join": false, "expect": ["Also, it's still putting periods in weird places if I pause"]},
   {"id": "k07", "context": "Do you want me to pick it up", "boundary": "?", "segment": "Or are you going to drop it off", "join": null, "expect": ["Or are you going to drop it off", "or are you going to drop it off"]},
+  {"id": "k09", "context": "So I'm going to assume that it is just not built yet", "boundary": ".", "segment": "And you stopped in the middle of building for some reason", "join": null, "expect": ["And you stopped in the middle of building for some reason", "and you stopped in the middle of building for some reason"]},
+  {"id": "k10", "context": "Periods are looking a little bit better", "boundary": ".", "segment": "All in all, this is working much better than Google's and Samsung's voice to text model", "join": false, "expect": ["All in all, this is working much better than Google's and Samsung's voice to text model"]},
   {"id": "k08", "context": "I hope that the UI gets a pretty massive upgrade before we are done", "boundary": ".", "segment": "That nice big flashing microphone emblem being replaced with tiny script", "join": false, "expect": ["That nice big flashing microphone emblem being replaced with tiny script"]},
 
   {"id": "n01", "context": "", "boundary": "", "segment": "I hope that the UI gets a pretty massive upgrade before we are done", "join": null, "expect": ["I hope that the UI gets a pretty massive upgrade before we are done"]},

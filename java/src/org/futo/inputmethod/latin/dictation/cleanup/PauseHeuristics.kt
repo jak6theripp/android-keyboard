@@ -15,6 +15,12 @@ object PauseHeuristics {
     /** A one-word "sentence" made of one of these is a pause after a conjunction ("So. I'm gonna…"). */
     private val LONE_CONNECTIVE = setOf("so", "and", "but", "or", "because", "plus", "then", "also", "well")
 
+    /** A "sentence" that is only one of these opening phrases is waiting for its main clause ("Other than that. Things are…"). */
+    private val OPENERS = setOf(
+        "other than that", "in that case", "for example", "for instance", "on top of that", "that being said",
+        "having said that", "first of all", "at this point", "on the other hand", "as far as i can tell", "either way"
+    )
+
     private fun bare(word: String) = word.lowercase().trim { !it.isLetterOrDigit() && it != '\'' }
 
     /** True if the text cannot be a finished sentence, so whatever follows must continue it. */
@@ -25,6 +31,7 @@ object PauseHeuristics {
         val words = lastSentence.split(Regex("\\s+")).map { bare(it) }.filter { it.isNotEmpty() }
         val last = words.lastOrNull() ?: return false
         if (last in NEVER_FINAL) return true
+        if (words.joinToString(" ") in OPENERS && !t.endsWith(".") && !t.endsWith("?") && !t.endsWith("!")) return true
         // "…again. So" → the last sentence so far is just a connective
         return words.size == 1 && last in LONE_CONNECTIVE && !t.endsWith(".") && !t.endsWith("?") && !t.endsWith("!")
     }

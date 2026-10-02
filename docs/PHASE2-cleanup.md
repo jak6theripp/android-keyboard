@@ -54,6 +54,9 @@ Date: 2026-10-02 (built unattended overnight). Device: SM-F966U.
   - API returning 400 → local fallback at warm-up, toast reason, no stall, no lost or duplicated words;
   - continuous speech (three sentences) → three utterances, correct periods.
 - **Divergence guard**: rejected a model reply that added a commentary sentence; accepts the heavy-but-legitimate vocabulary fixes.
+- **User edit while a cleanup is in flight** (three backspaces in the panel, injected audio, cleaner slowed to 1.2 s): the in-flight
+  result was dropped, the on-screen text stayed exactly as edited, the recognizer's later finals for that audio were discarded
+  instead of re-inserted, and dictation continued. No duplicate, no crash.
 
 ### Not yet verified
 - **The final prompt revision with the real model.** The Anthropic account ran out of credit ("Your credit balance is too low")
@@ -62,7 +65,6 @@ Date: 2026-10-02 (built unattended overnight). Device: SM-F966U.
   BREAK (now also covered by the local override), and one case where a one-word fragment was dropped.
   → Re-run `python tools/dictation-eval/run_eval.py` after adding credit.
 - **Real voice through the cleanup path.** All Phase 2 device tests used synthesized audio.
-- User editing/backspacing while an utterance is in flight (code path exists; exercised only in Phase 1 form).
 - Rotation / notification shade while text is pending cleanup (pending words are kept in the model and re-rendered; a
   `strandedComposing` check removes a stale copy on return — untested on the device).
 - Reply-mode conversation context (wired through `CleanupRequest.conversation`; used in Phase 5).

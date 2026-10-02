@@ -557,7 +557,7 @@ val LongPressMenu = UserSettingsMenu(
 
             val setting = useSharedPrefsInt(
                 key = Settings.PREF_BACKSPACE_MODE_HOLD,
-                default = oldSetting.value
+                default = Settings.BACKSPACE_MODE_WORDS
             )
 
             SettingToggleRaw(

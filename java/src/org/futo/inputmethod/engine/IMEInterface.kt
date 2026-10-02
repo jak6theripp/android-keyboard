@@ -105,3 +105,8 @@ interface IMEInterface {
     @UsedForTesting
     fun recycle() { }
 }
+
+/** An IME that temporarily owns input on behalf of an action (voice input, dictation). */
+interface TransactionIME : IMEInterface {
+    fun ensureFinished()
+}

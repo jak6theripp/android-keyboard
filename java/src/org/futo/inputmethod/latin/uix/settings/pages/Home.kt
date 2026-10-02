@@ -104,6 +104,14 @@ val HomeScreenLite = UserSettingsMenu(
         },
 
         userSettingNavigationItem(
+            title = R.string.dictation_settings_title,
+            subtitle = R.string.dictation_settings_subtitle,
+            style = NavigationItemStyle.HomePrimary,
+            navigateTo = "dictation",
+            icon = R.drawable.mic_fill
+        ),
+
+        userSettingNavigationItem(
             title = R.string.action_settings_title,
             style = NavigationItemStyle.HomeSecondary,
             navigateTo = "actions",

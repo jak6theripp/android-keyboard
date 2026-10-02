@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Streaming dictation (personal fork). Not translated. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="action_dictation_title">Dictation</string>
+    <string name="dictation_notification_channel">Dictation</string>
+    <string name="dictation_notification_title">Dictation mic is on</string>
+    <string name="dictation_notification_text">Tap Stop to end dictation</string>
+    <string name="dictation_notification_stop">Stop</string>
+
+    <string name="dictation_state_idle">Idle</string>
+    <string name="dictation_state_starting">Starting…</string>
+    <string name="dictation_state_listening">Listening</string>
+    <string name="dictation_state_reconnecting">Reconnecting…</string>
+    <string name="dictation_state_paused">Paused (audio focus lost)</string>
+    <string name="dictation_state_stopping">Stopping…</string>
+    <string name="dictation_stop">Stop</string>
+    <string name="dictation_backspace">Backspace</string>
+    <string name="dictation_tap_to_stop">Listening — tap to stop</string>
+    <string name="dictation_idle_warning">Stopping in %1$d s</string>
+    <string name="dictation_error_no_key">No Speechmatics API key. Add one in Settings → Dictation.</string>
+
+    <string name="dictation_settings_title">Dictation (streaming)</string>
+    <string name="dictation_settings_subtitle">Cloud streaming dictation, cleanup pass, vocabulary</string>
+    <string name="dictation_settings_keys_title">API keys</string>
+    <string name="dictation_settings_keys_present">Keys stored in Android Keystore: %1$s</string>
+    <string name="dictation_settings_keys_missing">No API keys stored</string>
+    <string name="dictation_settings_keys_import">Import keys from file</string>
+    <string name="dictation_settings_keys_import_hint">Push a keys.properties file (lines: speechmatics=…, anthropic=…) to the app\'s external files directory, then tap Import. The file is deleted after import.</string>
+    <string name="dictation_settings_keys_import_ok">Imported: %1$s</string>
+    <string name="dictation_settings_keys_import_fail">Import failed: %1$s</string>
+    <string name="dictation_settings_keys_clear">Clear stored keys</string>
+    <string name="dictation_settings_max_delay">Recognizer max delay</string>
+    <string name="dictation_settings_max_delay_subtitle">How long Speechmatics waits for context before finalizing words. Higher = more accurate, slower to commit.</string>
+    <string name="dictation_settings_idle_timeout">Idle timeout</string>
+    <string name="dictation_settings_idle_timeout_subtitle">Seconds of silence before the mic stops. Any speech resets it.</string>
+    <string name="dictation_settings_eou_silence">End-of-utterance silence</string>
+    <string name="dictation_settings_eou_silence_subtitle">Off (0) recommended, so a pause does not force a period. If set, a pause this long makes the recognizer finalize early without the words that follow.</string>
+    <string name="dictation_settings_punct">Punctuation sensitivity</string>
+    <string name="dictation_settings_punct_subtitle">Lower = the recognizer adds fewer punctuation marks</string>
+    <string name="dictation_settings_cleanup">LLM cleanup pass</string>
+    <string name="dictation_settings_cleanup_subtitle">Minimal corrections to each finalized segment (word boundaries, misheard words, punctuation)</string>
+    <string name="dictation_settings_hold_to_talk">Hold to talk</string>
+    <string name="dictation_settings_hold_to_talk_subtitle">Record only while the mic key is held (default: tap to toggle)</string>
+    <string name="dictation_settings_fallback_mic_key">Mic key on keyboard</string>
+    <string name="dictation_settings_fallback_mic_key_subtitle">Put a mic key at the bottom-left of the bottom row</string>
+    <string name="dictation_settings_debug_logging">Debug logging</string>
+    <string name="dictation_settings_debug_logging_subtitle">Log every partial, final, cleanup decision and timing to a local file</string>
+    <string name="dictation_settings_save_audio">Save audio (debug)</string>
+    <string name="dictation_settings_save_audio_subtitle">Also save raw microphone audio to the log directory. Off by default.</string>
+    <string name="dictation_settings_export_logs">Export logs</string>
+    <string name="dictation_settings_export_logs_subtitle">Copy session logs to the app\'s external files directory</string>
+    <string name="dictation_settings_export_logs_done">%1$d log file(s) copied to %2$s</string>
+    <string name="dictation_settings_vocab">Vocabulary</string>
+    <string name="dictation_settings_vocab_subtitle">One term per line. Sent to the recognizer as custom vocabulary and to the cleanup pass.</string>
+    <string name="dictation_settings_stt_url">Speechmatics endpoint</string>
+    <string name="dictation_settings_last_path">Last voice-input path triggered: %1$s</string>
+</resources>

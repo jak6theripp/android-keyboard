@@ -117,6 +117,8 @@ public final class InputLogic {
     private final RecapitalizeStatus mRecapitalizeStatus = new RecapitalizeStatus();
 
     private int mDeleteCount;
+    // Consecutive key-repeat backspaces in the current hold
+    private int mRepeatDeleteCount;
     private long mLastKeyTime;
     public final TreeSet<Long> mCurrentlyPressedHardwareKeys = new TreeSet<>();
 
@@ -1441,8 +1443,11 @@ public final class InputLogic {
             resetComposingWord(inputTransaction.mSettingsValues, false);
         }
 
+        if (event.isKeyRepeat()) mRepeatDeleteCount++; else mRepeatDeleteCount = 0;
+        // Letters first, then whole words once the key has been held for a while.
         final boolean deleteWholeWords = event.isKeyRepeat()
-                && inputTransaction.mSettingsValues.mBackspaceModeHold == Settings.BACKSPACE_MODE_WORDS;
+                && inputTransaction.mSettingsValues.mBackspaceModeHold == Settings.BACKSPACE_MODE_WORDS
+                && mRepeatDeleteCount > Settings.BACKSPACE_HOLD_LETTERS_BEFORE_WORDS;
 
         if (mWordComposer.isComposingWord() && !mConnection.hasSelection()) {
             if (mWordComposer.isBatchMode()) {

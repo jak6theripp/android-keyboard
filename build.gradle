@@ -431,7 +431,8 @@ dependencies {
 
     implementation 'sh.calvin.reorderable:reorderable:3.0.0'
 
-    //implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    // Streaming dictation WebSocket client (personal fork)
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.7.1'
 

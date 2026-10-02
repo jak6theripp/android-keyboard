@@ -2,7 +2,7 @@ package org.futo.inputmethod.engine.general
 
 import android.view.inputmethod.EditorInfo
 import org.futo.inputmethod.engine.IMEHelper
-import org.futo.inputmethod.engine.IMEInterface
+import org.futo.inputmethod.engine.TransactionIME
 import org.futo.inputmethod.event.Event
 import org.futo.inputmethod.latin.InputConnectionInternalComposingWrapper
 import org.futo.inputmethod.latin.SupportsNonComposing
@@ -15,7 +15,7 @@ import org.futo.inputmethod.latin.uix.getSetting
 import org.futo.inputmethod.latin.uix.utils.TextContext
 import org.futo.inputmethod.v2keyboard.KeyboardLayoutSetV2
 
-class ActionInputTransactionIME(val helper: IMEHelper) : IMEInterface, ActionInputTransaction {
+class ActionInputTransactionIME(val helper: IMEHelper) : TransactionIME, ActionInputTransaction {
     val useComposingMode = run {
         val inputType = helper.getCurrentEditorInfo()?.inputType ?: 0
         val inputClass = inputType and EditorInfo.TYPE_MASK_CLASS
@@ -108,7 +108,7 @@ class ActionInputTransactionIME(val helper: IMEHelper) : IMEInterface, ActionInp
         (ic as? InputConnectionInternalComposingWrapper)?.send()
     }
 
-    fun ensureFinished() {
+    override fun ensureFinished() {
         isFinished = true
     }
 }

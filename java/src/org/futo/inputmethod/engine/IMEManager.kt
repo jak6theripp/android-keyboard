@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.futo.inputmethod.annotations.UsedForTesting
 import org.futo.inputmethod.engine.general.ActionInputTransactionIME
+import org.futo.inputmethod.engine.general.DictationTransactionIME
 import org.futo.inputmethod.engine.general.GeneralIME
 import org.futo.inputmethod.engine.general.ChineseIME
 import org.futo.inputmethod.engine.general.JapaneseIME
@@ -164,8 +165,17 @@ class IMEManager(
         service.deferSetSetting(service, ImesEverUsedWithDictionaryPersonalization.key, emptySet())
     }
 
-    private var currentActionInputTransactionIME: ActionInputTransactionIME? = null
-    fun createInputTransaction(): ActionInputTransaction {
+    private var currentActionInputTransactionIME: TransactionIME? = null
+    fun createInputTransaction(): ActionInputTransaction =
+        installTransaction(ActionInputTransactionIME(helper))
+
+    /** Streaming dictation: a transaction that stays open across many commits. */
+    fun createDictationTransaction(
+        onSelectionUpdate: (Int, Int, Int, Int, Int, Int) -> Unit
+    ): DictationTransactionIME =
+        installTransaction(DictationTransactionIME(helper, onSelectionUpdate))
+
+    private fun <T : TransactionIME> installTransaction(ime: T): T {
         if(currentActionInputTransactionIME != null) {
             throwIfDebug(IllegalStateException("Cannot create an input transaction while one is already active."))
             endInputTransaction(currentActionInputTransactionIME!!)
@@ -175,7 +185,6 @@ class IMEManager(
         }
 
         val existingIme = getActiveIME(settings.current)
-        val ime = ActionInputTransactionIME(helper)
         currentActionInputTransactionIME = ime
 
         var selectionUpdated = false
@@ -224,7 +233,7 @@ class IMEManager(
         }
     }
 
-    fun endInputTransaction(inputTransactionIME: ActionInputTransactionIME) {
+    fun endInputTransaction(inputTransactionIME: TransactionIME) {
         if(inputTransactionIME == currentActionInputTransactionIME) {
             currentActionInputTransactionIME = null
 

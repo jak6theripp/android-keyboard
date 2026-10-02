@@ -94,7 +94,7 @@ class IMEHelper(
         )
     }
 
-    fun endInputTransaction(inputTransactionIME: ActionInputTransactionIME) {
+    fun endInputTransaction(inputTransactionIME: TransactionIME) {
         latinIME.imeManager.endInputTransaction(inputTransactionIME)
     }
 

@@ -202,6 +202,9 @@ class LatinIME : InputMethodServiceCompose(), LatinIMELegacy.SuggestionStripCont
 
     val uixManager = UixManager(this)
 
+    /** Streaming dictation: service-level owner of dictation text; survives view recreation. */
+    val dictationController by lazy { org.futo.inputmethod.latin.dictation.DictationController(this) }
+
     val sizingCalculator = KeyboardSizingCalculator(this, uixManager)
 
     private var activeThemeOption: ThemeOption? = null
@@ -632,10 +635,13 @@ class LatinIME : InputMethodServiceCompose(), LatinIMELegacy.SuggestionStripCont
         lifecycleScope.launch { uixManager.showUpdateNoticeIfNeeded() }
         updateColorsIfDynamicChanged()
         uixManager.updateEmojiTranslationsIfNeeded()
+        dictationController.onStartInputView(info, restarting)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        // Must run before imeManager.onFinishInput() ends the dictation transaction
+        dictationController.onFinishInputView(finishingInput)
         latinIMELegacy.onFinishInputView(finishingInput)
         uixManager.onInputFinishing()
         imeManager.onFinishInput()

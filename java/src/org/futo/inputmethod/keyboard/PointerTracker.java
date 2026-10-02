@@ -1416,11 +1416,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
         int delay = (repeatCount == 1) ? keyRepeatStartTimeout : keyRepeatTimeout;
 
-        // Slow down the repeat key if we are deleting whole words
+        // Hold-to-delete-words: normal letter repeat first, then whole words that start slow
+        // and accelerate up to a cap.
         if(code == Constants.CODE_DELETE
-                && settingsValues.mBackspaceModeHold == Settings.BACKSPACE_MODE_WORDS
-                && repeatCount > 1) {
-            delay = (int)((float)delay * (7.0f * (1.0f / ((float)(repeatCount - 1))) + 1.0f));
+                && settingsValues.mBackspaceModeHold == Settings.BACKSPACE_MODE_WORDS) {
+            final int wordIndex = repeatCount - Settings.BACKSPACE_HOLD_LETTERS_BEFORE_WORDS;
+            if (wordIndex >= 1) {
+                delay = Math.max(80, (int)(230.0 * Math.pow(0.87, wordIndex - 1)));
+            }
         }
 
         sTimerProxy.startKeyRepeatTimerOf(this, repeatCount, delay);

@@ -1459,6 +1459,11 @@ class UixManager(private val latinIME: LatinIME) {
     }
 
 
+    /** Closes the action window only if it currently shows [action]. */
+    fun closeActionWindowIf(action: Action) {
+        if(currWindowAction.value == action) closeActionWindow()
+    }
+
     fun updateVisibility(shouldShowSuggestionsStrip: Boolean, fullscreenMode: Boolean) {
         this.shouldShowSuggestionStrip.value = shouldShowSuggestionsStrip
     }

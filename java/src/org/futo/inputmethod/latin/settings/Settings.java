@@ -139,6 +139,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     public static final String PREF_BACKSPACE_MODE_HOLD = "pref_backspace_mode_hold";
     public static final String PREF_BACKSPACE_MODE = "pref_backspace_mode";
+    /** With hold-to-delete-words on, this many single-character repeats happen before whole words. */
+    public static final int BACKSPACE_HOLD_LETTERS_BEFORE_WORDS = 12;
     public static final int BACKSPACE_MODE_CHARACTERS = 0; // Long-press backspace and swipe backspace removes just characters
     public static final int BACKSPACE_MODE_WORDS = 1; // Long-press backspace and swipe backspace removes entire words
     public static final int BACKSPACE_MODE_OFF = 2;

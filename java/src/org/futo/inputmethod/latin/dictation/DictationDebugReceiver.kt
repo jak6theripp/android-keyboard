@@ -68,6 +68,10 @@ class DictationDebugReceiver : BroadcastReceiver() {
                 DictationController.debugFakeCleanupMs = intent.getLongExtra("ms", 0L)
                 Log.i(TAG, "FAKE_CLEANUP ms=${DictationController.debugFakeCleanupMs}")
             }
+            P + "DEBUG_OFFLINE" -> {
+                NetworkStatus.debugForceOffline = intent.getBooleanExtra("on", false)
+                Log.i(TAG, "OFFLINE forced=${NetworkStatus.debugForceOffline} online=${NetworkStatus.isOnline(context)}")
+            }
             P + "DEBUG_STOP" -> { DictationEngine.stop("debug"); Log.i(TAG, "STOP") }
             P + "DEBUG_FIELD" -> {
                 val text = DictationController.instance?.debugTextBeforeCursor(6000)

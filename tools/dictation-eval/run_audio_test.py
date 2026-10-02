@@ -64,7 +64,7 @@ def main():
 
     adb("shell", "setprop", "log.tag.Dictation", "DEBUG")
     bc("DEBUG_FAKE_CLEANUP", "--el", "ms", str(fake))
-    bc("DEBUG_AUDIO", "--es", "path", remote)
+    bc("DEBUG_AUDIO", "--es", "path", remote, "--ez", "sticky", "true")  # sticky: an unattended test must never open the real mic
     adb("logcat", "-c")
     bc("DEBUG_TOGGLE")
     time.sleep(seconds + tail)

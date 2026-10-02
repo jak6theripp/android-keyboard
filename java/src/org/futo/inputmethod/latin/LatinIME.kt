@@ -852,12 +852,17 @@ class LatinIME : InputMethodServiceCompose(), LatinIMELegacy.SuggestionStripCont
 
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreateInlineSuggestionsRequest(uiExtras: Bundle): InlineSuggestionsRequest? {
+        // Logged so it can be seen whether the autofill provider (Samsung Pass) asks this keyboard
+        // for inline suggestions at all. No field contents are logged.
+        Log.i("InlineAutofill", "request created for ${currentInputEditorInfo?.packageName}")
         return createInlineSuggestionsRequest(this, colorScheme)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onInlineSuggestionsResponse(response: InlineSuggestionsResponse): Boolean {
-        return uixManager.onInlineSuggestionsResponse(response)
+        val shown = uixManager.onInlineSuggestionsResponse(response)
+        Log.i("InlineAutofill", "response suggestions=${response.inlineSuggestions.size} shown=$shown")
+        return shown
     }
 
     fun requestForgetWord(suggestedWordInfo: SuggestedWordInfo) {

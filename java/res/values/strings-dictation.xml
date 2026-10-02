@@ -52,6 +52,7 @@
     <string name="dictation_backspace">Backspace</string>
     <string name="dictation_tap_to_stop">Listening — tap to stop</string>
     <string name="dictation_idle_warning">Stopping in %1$d s</string>
+    <string name="dictation_offline_fallback">Offline: using on-device voice input</string>
     <string name="dictation_error_no_key">No Speechmatics API key. Add one in Settings → Dictation.</string>
 
     <string name="dictation_settings_title">Dictation (streaming)</string>

@@ -9,6 +9,10 @@ import org.futo.inputmethod.keyboard.internal.KeyboardCodesSet
 import org.futo.inputmethod.latin.R
 import org.futo.inputmethod.latin.common.Constants
 import org.futo.inputmethod.latin.settings.Settings
+import android.util.Log
+import android.widget.Toast
+import org.futo.inputmethod.latin.dictation.DictationEngine
+import org.futo.inputmethod.latin.dictation.NetworkStatus
 import org.futo.inputmethod.latin.uix.Action
 import org.futo.inputmethod.latin.uix.PreferenceUtils
 import org.futo.inputmethod.latin.uix.SettingsKey
@@ -72,6 +76,15 @@ private fun List<Action>.verifyNamesAreUnique(): List<Action> {
 
 object ActionRegistry {
     fun getActionOverride(context: Context, action: Action): Action {
+        // Streaming dictation needs the network. With none, fall back to the on-device Whisper
+        // voice input that ships with the keyboard. (A connection lost mid-session is different:
+        // the engine keeps recording and replays the audio when it reconnects.)
+        if(action == DictationAction && !DictationEngine.isActive && !NetworkStatus.isOnline(context)) {
+            Log.i("DictationEngine", "dictation start trigger=offline_whisper_fallback")
+            try { Toast.makeText(context, R.string.dictation_offline_fallback, Toast.LENGTH_SHORT).show() } catch(_: Exception) {}
+            return getActionOverride(context, VoiceInputAction)
+        }
+
         return if(action == VoiceInputAction || action == SystemVoiceInputAction) {
             val useSystemVoiceInput = context.getSetting(USE_SYSTEM_VOICE_INPUT)
             if(useSystemVoiceInput) {

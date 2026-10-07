@@ -164,7 +164,12 @@ class DictationController(private val latinIME: LatinIME) {
     }
 
     fun start(triggerPath: String) {
-        if (engine.isActive || finalizing) return
+        if (engine.isActive) return
+        if (finalizing) {
+            // Belt and braces: the previous session's tail never completed. Do not stay stuck forever.
+            DictationLog.event("finalizing_reset_on_start", "inFlight" to (inFlight != null))
+            endSession("stale_finalize")
+        }
         lastError.value = null
         detached = false
         if (!inputViewActive || latinIME.currentInputConnection == null) {
@@ -450,6 +455,14 @@ class DictationController(private val latinIME: LatinIME) {
                 partial = ""; partialRaw = ""
                 finalizing = true
                 finalizeReason = ev.reason
+                val sid = sessionId
+                latinIME.lifecycleScope.launch(Dispatchers.Main.immediate) {
+                    delay(CLEANUP_TIMEOUT_MS + 2500)
+                    if (finalizing && sessionId == sid && !engine.isActive) {
+                        DictationLog.event("finalize_watchdog", "inFlight" to (inFlight != null))
+                        endSession("watchdog")
+                    }
+                }
                 proceedFinalize()
             }
         }
@@ -789,8 +802,11 @@ class DictationController(private val latinIME: LatinIME) {
         DictationLog.event("freeze_for_user_edit", "why" to why, "discardUntilMs" to discardUntilMs,
             "pendingWords" to wordCount(pendingRaw), "inFlight" to (inFlight != null))
         rememberCommitted(composingShown)
+        val wasFinalizing = finalizing && inFlight != null
         dropInFlight()
         pendingRaw.clear(); partial = ""; partialRaw = ""; composingShown = ""
+        // The dropped job was the one that would have ended the session: end it now instead.
+        if (wasFinalizing) { DictationLog.event("finalize_after_freeze"); proceedFinalize() }
     }
 
     /** Rate-limit composing updates to ~10/s (leading edge); only the trailing tail ever changes. */

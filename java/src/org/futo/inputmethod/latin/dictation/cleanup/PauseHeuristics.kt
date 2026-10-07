@@ -10,7 +10,8 @@ object PauseHeuristics {
     /** Words that cannot end an English sentence. */
     private val NEVER_FINAL = setOf(
         "the", "a", "an", "because", "and", "or", "of", "my", "your", "our", "their", "its",
-        "than", "into", "onto", "from", "every", "very"
+        "than", "into", "onto", "from", "every", "very",
+        "but", "nor", "yet", "unless", "until", "whether", "whereas", "with", "per", "via", "versus", "plus"
     )
     /** A one-word "sentence" made of one of these is a pause after a conjunction ("So. I'm gonna…"). */
     private val LONE_CONNECTIVE = setOf("so", "and", "but", "or", "because", "plus", "then", "also", "well")

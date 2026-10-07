@@ -13,6 +13,9 @@
   {"id": "p12", "context": "I just have to physically tap the text box again to bring the keyboard back up. But it seems to actually queue up what I said and put it in", "boundary": ".", "segment": "Once the text box is back open", "join": true, "expect": ["once the text box is back open"]},
   {"id": "p13", "context": "And you stopped in the middle of building for some reason. Other than that", "boundary": ".", "segment": "Things are looking a little bit better. Periods are looking a little bit better", "join": true, "expect": ["things are looking a little bit better. Periods are looking a little bit better"]},
   {"id": "p14", "context": "The deck spindle is shot. In that case", "boundary": ".", "segment": "We should just replace the whole deck", "join": true, "expect": ["we should just replace the whole deck"]},
+  {"id": "p15", "context": "Explain why it wasn't overheating before, but", "boundary": ".", "segment": "Who the hell knows", "join": true, "expect": ["who the hell knows"]},
+  {"id": "p16", "context": "I got some stuff to do that with", "boundary": ".", "segment": "Instead of using dish soap like I did on the dozer", "join": true, "expect": ["instead of using dish soap like I did on the dozer"]},
+  {"id": "p17", "context": "Make sense? I went to bed at ten, fell asleep around 11", "boundary": ".", "segment": "Woke up at five", "join": true, "expect": [", woke up at five", "woke up at five"]},
 
   {"id": "k01", "context": "So that is not a test that I can do", "boundary": ".", "segment": "It looks to me like the", "join": false, "expect": ["It looks to me like the"]},
   {"id": "k02", "context": "The mower is finally running", "boundary": ".", "segment": "I'll bring it by tomorrow", "join": false, "expect": ["I'll bring it by tomorrow"]},

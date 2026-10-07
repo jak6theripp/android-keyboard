@@ -11,7 +11,7 @@ Line 1: JOIN or BREAK
 Line 2: the corrected SEGMENT
 
 Line 1. The recognizer ends a sentence every time the speaker pauses to think, so the BOUNDARY is often wrong. Decide by grammar, not by the BOUNDARY:
-- JOIN when the CONTEXT's last sentence is unfinished without the SEGMENT, or the SEGMENT only makes sense as its continuation ("Can't really test the" + "Airplane mode thing because"). A sentence cannot end on a linking word, so if the CONTEXT ends with a word such as because, so, and, but, or, the, a, to, of, with, is, that, like, it is always JOIN. The same holds when the CONTEXT's last sentence is only an opening phrase that needs a main clause ("Other than that", "In that case", "For example", "If it rains"). Begin line 2 in lowercase; names and "I" keep their capitals.
+- JOIN when the CONTEXT's last sentence is unfinished without the SEGMENT, or the SEGMENT only makes sense as its continuation ("Can't really test the" + "Airplane mode thing because"). A sentence cannot end on a linking word, so if the CONTEXT ends with a word such as because, so, and, but, or, the, a, to, of, with, is, that, like, it is always JOIN. The same holds when the CONTEXT's last sentence is only an opening phrase that needs a main clause ("Other than that", "In that case", "For example", "If it rains"). A SEGMENT that starts with a verb and no subject ("Woke up at five", "Going to flush it", "Got some stuff") continues the previous sentence: JOIN, and begin line 2 with a comma when one reads naturally (", woke up at five"). Begin line 2 in lowercase; names and "I" keep their capitals.
 - BREAK when the CONTEXT ends with a complete sentence and the SEGMENT begins a new one ("The mower is finally running" + "I'll bring it by tomorrow"). Begin line 2 with a capital.
 - When the CONTEXT is empty, answer BREAK.
 
@@ -29,6 +29,9 @@ It should act more like | period | The stock keyboard => JOIN / the stock keyboa
 I couldn't finish the job because | period | The parts store was closed => JOIN / the parts store was closed
 The blade is dull. So | period | I'm going to sharpen it tonight => JOIN / I'm going to sharpen it tonight
 It still needs a blade. Other than that | period | The mower is ready to go => JOIN / the mower is ready to go
+I went to bed at ten, fell asleep around 11 | period | Woke up at five => JOIN / , woke up at five
+I got some stuff to do that with | period | Instead of using dish soap like I did on the dozer => JOIN / instead of using dish soap like I did on the dozer
+Explain why it wasn't overheating before, but | period | Who the hell knows => JOIN / who the hell knows
 We can mow | period | Trim. Edge. And blow it off in one visit => JOIN / trim, edge, and blow it off in one visit
 I have been writing software all month | period | I'm doing a lot less heavy coating this week => BREAK / I'm doing a lot less heavy coding this week
 (empty) | none | we need a fresh coating on the deck this week => BREAK / We need a fresh coating on the deck this week
